@@ -69,7 +69,7 @@ class WorkspaceAgentInterfaceImplTest extends AnyFlatSpec with Matchers with org
 
   it should "modify file content" in {
     // First create a file to modify
-    interface.writeFile("modify-test.txt", "Line 1\nLine 2\nLine 3\nLine 4\nLine 5")
+    interface.writeFile("modify-test.txt", "Line 1\nLine 2\nOld Line 3\nLine 4\nLine 5")
 
     // Test replace operation
     val replaceOp = ReplaceOperation(
