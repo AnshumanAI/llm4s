@@ -1,22 +1,43 @@
-ThisBuild / scalaVersion     := "2.13.16"
-ThisBuild / version          := "0.1.0-SNAPSHOT"
-ThisBuild / organization     := "org.llm4s"
-ThisBuild / organizationName := "llm4s"
+import xerial.sbt.Sonatype.sonatypeCentralHost
 
-// Scalafmt configuration
-ThisBuild / scalafmtOnCompile := true
+inThisBuild(
+  List(
+    scalaVersion           := "2.13.16",
+    version                := "0.1.0-SNAPSHOT",
+    organization           := "org.llm4s",
+    organizationName       := "llm4s",
+    versionScheme          := Some("early-semver"),
+    sonatypeCredentialHost := sonatypeCentralHost,
+    // Scalafmt configuration
+//    scalafmtOnCompile := true,
+    // Maven central repository deployment
+    homepage               := Some(url("https://github.com/llm4s/")),
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeRepository     := "https://s01.oss.sonatype.org/service/local",
+    pgpPublicRing          := file("/tmp/public.asc"),
+    pgpSecretRing          := file("/tmp/secret.asc"),
+    pgpPassphrase          := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
+    scmInfo := Some(
+      ScmInfo(
+        url("https://github.com/llm4s/llm4s/"),
+        "scm:git:git@github.com:llm4s/llm4s.git"
+      )
+    ),
+  )
+)
+
+sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 
 lazy val root = (project in file("."))
   .aggregate(shared, workspaceRunner)
   .dependsOn(shared)
-  .dependsOn(shared)
   .settings(
     name := "llm4s",
     libraryDependencies ++= List(
-      "com.azure"      % "azure-ai-openai" % "1.0.0-beta.15",
-      "com.anthropic"  % "anthropic-java"  % "0.9.1",
+      "com.azure"      % "azure-ai-openai" % "1.0.0-beta.16",
+      "com.anthropic"  % "anthropic-java"  % "1.1.0",
       "ch.qos.logback" % "logback-classic" % "1.5.18",
-      "com.knuddels" % "jtokkit" % "1.1.0",
+      "com.knuddels"   % "jtokkit"         % "1.1.0",
       "com.lihaoyi"   %% "upickle"         % "4.1.0",
       "com.lihaoyi"   %% "requests"        % "0.9.0",
       "org.scalatest" %% "scalatest"       % "3.2.19" % Test
@@ -50,6 +71,9 @@ lazy val workspaceRunner = (project in file("workspaceRunner"))
       "org.scalatest" %% "scalatest"       % "3.2.19" % Test
     )
   )
+  .settings(
+    publish / skip := true
+  )
 
 lazy val samples = (project in file("samples"))
   .dependsOn(shared, root)
@@ -59,4 +83,7 @@ lazy val samples = (project in file("samples"))
       "ch.qos.logback" % "logback-classic" % "1.5.18",
       "org.scalatest" %% "scalatest"       % "3.2.19" % Test
     )
+  )
+  .settings(
+    publish / skip := true
   )
