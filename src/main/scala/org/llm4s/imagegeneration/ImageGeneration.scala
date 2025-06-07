@@ -186,8 +186,6 @@ object ImageGeneration {
     config match {
       case sdConfig: StableDiffusionConfig => 
         new org.llm4s.imagegeneration.provider.StableDiffusionClient(sdConfig)
-      case _ => 
-        throw new UnsupportedOperationException(s"Provider ${config.provider} not yet implemented")
     }
   }
 

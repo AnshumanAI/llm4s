@@ -76,7 +76,7 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
       "cfg_scale" -> options.guidanceScale,
       "batch_size" -> count,
       "n_iter" -> 1,
-      "seed" -> options.seed.getOrElse(-1),
+      "seed" -> options.seed.getOrElse(-1L),
       "sampler_name" -> "Euler a"
     )
   }
@@ -85,7 +85,7 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
     val url = s"${config.baseUrl}/sdapi/v1/txt2img"
     val headers = Map(
       "Content-Type" -> "application/json"
-    ) ++ config.apiKey.map("Authorization" -> s"Bearer $_").toMap
+    ) ++ config.apiKey.map(key => "Authorization" -> s"Bearer $key").toMap
     
     logger.debug(s"Making request to: $url")
     logger.debug(s"Payload: ${ujson.write(payload, indent = 2)}")
