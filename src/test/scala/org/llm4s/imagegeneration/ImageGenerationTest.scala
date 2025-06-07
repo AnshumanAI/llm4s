@@ -1,0 +1,308 @@
+package org.llm4s.imagegeneration
+
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+import java.time.Instant
+import java.nio.file.{Files, Paths}
+import java.util.Base64
+
+/**
+ * Comprehensive test suite for the Image Generation API.
+ * 
+ * Includes unit tests for models, integration tests for the factory,
+ * and a mock implementation for testing without a real server.
+ */
+class ImageGenerationTest extends AnyFunSuite with Matchers {
+
+  // ===== MOCK CLIENT FOR TESTING =====
+
+  class MockImageGenerationClient extends ImageGenerationClient {
+    // Mock image data - a simple 1x1 PNG pixel in base64
+    private val mockImageData = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    
+    override def generateImage(
+      prompt: String,
+      options: ImageGenerationOptions = ImageGenerationOptions()
+    ): Either[ImageGenerationError, GeneratedImage] = {
+      if (prompt.trim.isEmpty) {
+        return Left(ValidationError("Prompt cannot be empty"))
+      }
+      if (prompt.toLowerCase.contains("inappropriate")) {
+        return Left(InvalidPromptError("Prompt contains inappropriate content"))
+      }
+      Right(GeneratedImage(
+        data = mockImageData,
+        format = options.format,
+        size = options.size,
+        prompt = prompt,
+        seed = options.seed
+      ))
+    }
+    
+    override def generateImages(
+      prompt: String,
+      count: Int,
+      options: ImageGenerationOptions = ImageGenerationOptions()
+    ): Either[ImageGenerationError, Seq[GeneratedImage]] = {
+      if (count <= 0) return Left(ValidationError("Count must be positive"))
+      if (count > 10) return Left(InsufficientResourcesError("Cannot generate more than 10 images at once"))
+      
+      generateImage(prompt, options) match {
+        case Right(singleImage) =>
+          val images = (1 to count).map { i =>
+            singleImage.copy(seed = options.seed.map(_ + i))
+          }
+          Right(images)
+        case Left(error) => Left(error)
+      }
+    }
+    
+    override def health(): Either[ImageGenerationError, ServiceStatus] = {
+      Right(ServiceStatus(
+        status = HealthStatus.Healthy,
+        message = "Mock service is always healthy",
+        queueLength = Some(0),
+        averageGenerationTime = Some(100)
+      ))
+    }
+  }
+
+  // ===== MODEL UNIT TESTS =====
+
+  test("ImageSize provides correct dimensions") {
+    ImageSize.Square512.width shouldBe 512
+    ImageSize.Square512.height shouldBe 512
+    ImageSize.Square512.description shouldBe "512x512"
+    
+    ImageSize.Landscape768x512.width shouldBe 768
+    ImageSize.Landscape768x512.height shouldBe 512
+    ImageSize.Landscape768x512.description shouldBe "768x512"
+  }
+
+  test("ImageFormat provides correct metadata") {
+    ImageFormat.PNG.extension shouldBe "png"
+    ImageFormat.PNG.mimeType shouldBe "image/png"
+    
+    ImageFormat.JPEG.extension shouldBe "jpg"
+    ImageFormat.JPEG.mimeType shouldBe "image/jpeg"
+  }
+
+  test("ImageGenerationOptions has sensible defaults") {
+    val options = ImageGenerationOptions()
+    
+    options.size shouldBe ImageSize.Square512
+    options.format shouldBe ImageFormat.PNG
+    options.seed shouldBe None
+    options.guidanceScale shouldBe 7.5
+    options.inferenceSteps shouldBe 20
+    options.negativePrompt shouldBe None
+  }
+
+  test("GeneratedImage decodes base64 data correctly") {
+    val testData = "test image data".getBytes("UTF-8")
+    val base64Data = Base64.getEncoder.encodeToString(testData)
+    
+    val image = GeneratedImage(
+      data = base64Data,
+      format = ImageFormat.PNG,
+      size = ImageSize.Square512,
+      prompt = "test prompt"
+    )
+    
+    image.asBytes shouldBe testData
+    image.prompt shouldBe "test prompt"
+  }
+
+  test("GeneratedImage can save to file") {
+    val testData = "test image data".getBytes("UTF-8")
+    val base64Data = Base64.getEncoder.encodeToString(testData)
+    
+    val image = GeneratedImage(
+      data = base64Data,
+      format = ImageFormat.PNG,
+      size = ImageSize.Square512,
+      prompt = "test prompt"
+    )
+    
+    val tempFile = Files.createTempFile("test_image", ".png")
+    
+    try {
+      image.saveToFile(tempFile) match {
+        case Right(savedImage) =>
+          savedImage.filePath shouldBe Some(tempFile)
+          Files.readAllBytes(tempFile) shouldBe testData
+          
+        case Left(error) =>
+          fail(s"Failed to save image: ${error.message}")
+      }
+    } finally {
+      Files.deleteIfExists(tempFile)
+    }
+  }
+
+  // ===== FACTORY TESTS =====
+
+  test("ImageGeneration creates correct client for StableDiffusion config") {
+    val config = StableDiffusionConfig()
+    val client = ImageGeneration.client(config)
+    
+    client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
+  }
+
+  test("ImageGeneration throws for unimplemented providers") {
+    val dalleConfig = DALLEConfig("test-key")
+    assertThrows[UnsupportedOperationException] {
+      ImageGeneration.client(dalleConfig)
+    }
+    
+    val mjConfig = MidjourneyConfig("test-key")
+    assertThrows[UnsupportedOperationException] {
+      ImageGeneration.client(mjConfig)
+    }
+  }
+
+  test("stableDiffusionClient creates client with correct config") {
+    val client = ImageGeneration.stableDiffusionClient(
+      baseUrl = "http://test:8080",
+      apiKey = Some("test-key")
+    )
+    
+    client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
+  }
+
+  test("Config objects have correct default values") {
+    val sdConfig = StableDiffusionConfig()
+    sdConfig.baseUrl shouldBe "http://localhost:7860"
+    sdConfig.apiKey shouldBe None
+    sdConfig.timeout shouldBe 60000
+    sdConfig.provider shouldBe ImageGenerationProvider.StableDiffusion
+    
+    val dalleConfig = DALLEConfig("test-key")
+    dalleConfig.apiKey shouldBe "test-key"
+    dalleConfig.timeout shouldBe 60000
+    dalleConfig.provider shouldBe ImageGenerationProvider.DALLE
+  }
+
+  test("Config objects can be customized") {
+    val customConfig = StableDiffusionConfig(
+      baseUrl = "http://custom:9000",
+      apiKey = Some("custom-key"),
+      timeout = 120000
+    )
+    
+    customConfig.baseUrl shouldBe "http://custom:9000"
+    customConfig.apiKey shouldBe Some("custom-key")
+    customConfig.timeout shouldBe 120000
+  }
+
+  // ===== MOCK CLIENT TESTS =====
+
+  val mockClient = new MockImageGenerationClient()
+
+  test("Mock client generates image successfully") {
+    val result = mockClient.generateImage("A beautiful landscape")
+    
+    result shouldBe a[Right[_, _]]
+    val image = result.right.get
+    
+    image.prompt shouldBe "A beautiful landscape"
+    image.format shouldBe ImageFormat.PNG
+    image.size shouldBe ImageSize.Square512
+    image.data should not be empty
+  }
+
+  test("Mock client respects custom options") {
+    val options = ImageGenerationOptions(
+      size = ImageSize.Landscape768x512,
+      format = ImageFormat.JPEG,
+      seed = Some(42),
+      guidanceScale = 10.0,
+      negativePrompt = Some("blurry")
+    )
+    
+    val result = mockClient.generateImage("Test prompt", options)
+    
+    result shouldBe a[Right[_, _]]
+    val image = result.right.get
+    
+    image.size shouldBe ImageSize.Landscape768x512
+    image.format shouldBe ImageFormat.JPEG
+    image.seed shouldBe Some(42)
+  }
+
+  test("Mock client validates prompts") {
+    // Empty prompt
+    val result1 = mockClient.generateImage("")
+    result1 shouldBe a[Left[_, _]]
+    result1.left.get shouldBe a[ValidationError]
+    
+    // Inappropriate content
+    val result2 = mockClient.generateImage("inappropriate content")
+    result2 shouldBe a[Left[_, _]]
+    result2.left.get shouldBe a[InvalidPromptError]
+  }
+
+  test("Mock client generates multiple images") {
+    val result = mockClient.generateImages("Test prompt", 3)
+    
+    result shouldBe a[Right[_, _]]
+    val images = result.right.get
+    
+    images should have length 3
+    images.foreach { image =>
+      image.prompt shouldBe "Test prompt"
+      image.data should not be empty
+    }
+  }
+
+  test("Mock client validates image count") {
+    // Test negative/zero count
+    mockClient.generateImages("Test", -1) shouldBe a[Left[_, _]]
+    mockClient.generateImages("Test", 0) shouldBe a[Left[_, _]]
+    
+    // Test too many images
+    val result = mockClient.generateImages("Test", 15)
+    result shouldBe a[Left[_, _]]
+    result.left.get shouldBe a[InsufficientResourcesError]
+  }
+
+  test("Mock client reports healthy status") {
+    val result = mockClient.health()
+    
+    result shouldBe a[Right[_, _]]
+    val status = result.right.get
+    
+    status.status shouldBe HealthStatus.Healthy
+    status.message shouldBe "Mock service is always healthy"
+    status.queueLength shouldBe Some(0)
+    status.averageGenerationTime shouldBe Some(100)
+  }
+
+  // ===== ERROR HANDLING TESTS =====
+
+  test("Error types have correct messages") {
+    val authError = AuthenticationError("Invalid API key")
+    val serviceError = ServiceError("Server error", 500)
+    val validationError = ValidationError("Invalid prompt")
+    val unknownError = UnknownError(new RuntimeException("Something went wrong"))
+    
+    authError.message shouldBe "Invalid API key"
+    serviceError.message shouldBe "Server error"
+    serviceError.code shouldBe 500
+    validationError.message shouldBe "Invalid prompt"
+    unknownError.message shouldBe "Something went wrong"
+  }
+
+  // ===== INTEGRATION TESTS =====
+
+  test("generateWithStableDiffusion handles connection errors gracefully") {
+    // This will fail because no real SD server is running at this port
+    val result = ImageGeneration.generateWithStableDiffusion(
+      "test prompt",
+      baseUrl = "http://localhost:99999"
+    )
+    
+    result shouldBe a[Left[_, _]]
+    result.left.get shouldBe a[ImageGenerationError]
+  }
+} 
