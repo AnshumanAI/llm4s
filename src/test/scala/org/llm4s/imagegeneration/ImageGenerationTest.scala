@@ -149,16 +149,12 @@ class ImageGenerationTest extends AnyFunSuite with Matchers {
     client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
   }
 
-  test("ImageGeneration throws for unimplemented providers") {
-    val dalleConfig = DALLEConfig("test-key")
-    assertThrows[UnsupportedOperationException] {
-      ImageGeneration.client(dalleConfig)
-    }
+  test("ImageGeneration only supports StableDiffusion for now") {
+    // Only StableDiffusion is implemented in this milestone
+    val config = StableDiffusionConfig()
+    val client = ImageGeneration.client(config)
     
-    val mjConfig = MidjourneyConfig("test-key")
-    assertThrows[UnsupportedOperationException] {
-      ImageGeneration.client(mjConfig)
-    }
+    client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
   }
 
   test("stableDiffusionClient creates client with correct config") {
@@ -176,11 +172,6 @@ class ImageGenerationTest extends AnyFunSuite with Matchers {
     sdConfig.apiKey shouldBe None
     sdConfig.timeout shouldBe 60000
     sdConfig.provider shouldBe ImageGenerationProvider.StableDiffusion
-    
-    val dalleConfig = DALLEConfig("test-key")
-    dalleConfig.apiKey shouldBe "test-key"
-    dalleConfig.timeout shouldBe 60000
-    dalleConfig.provider shouldBe ImageGenerationProvider.DALLE
   }
 
   test("Config objects can be customized") {

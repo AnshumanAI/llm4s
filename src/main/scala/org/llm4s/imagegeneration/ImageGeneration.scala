@@ -137,6 +137,7 @@ object ImageGenerationProvider {
   case object StableDiffusion extends ImageGenerationProvider
   case object DALLE extends ImageGenerationProvider
   case object Midjourney extends ImageGenerationProvider
+  case object HuggingFace extends ImageGenerationProvider
 }
 
 sealed trait ImageGenerationConfig {
@@ -154,6 +155,18 @@ case class StableDiffusionConfig(
   override val timeout: Int = 60000 // 60 seconds for image generation
 ) extends ImageGenerationConfig {
   def provider: ImageGenerationProvider = ImageGenerationProvider.StableDiffusion
+}
+
+/** Configuration for HuggingFace Inference API */
+case class HuggingFaceConfig(
+  /** HuggingFace API token */
+  apiKey: String,
+  /** Model to use (default: stable-diffusion-xl-base-1.0) */
+  model: String = "stabilityai/stable-diffusion-xl-base-1.0",
+  /** Request timeout in milliseconds */
+  override val timeout: Int = 120000 // 2 minutes for cloud generation
+) extends ImageGenerationConfig {
+  def provider: ImageGenerationProvider = ImageGenerationProvider.HuggingFace
 }
 
 // ===== CLIENT INTERFACE =====
@@ -186,6 +199,8 @@ object ImageGeneration {
     config match {
       case sdConfig: StableDiffusionConfig => 
         new org.llm4s.imagegeneration.provider.StableDiffusionClient(sdConfig)
+      case hfConfig: HuggingFaceConfig => 
+        new org.llm4s.imagegeneration.provider.HuggingFaceClient(hfConfig)
     }
   }
 

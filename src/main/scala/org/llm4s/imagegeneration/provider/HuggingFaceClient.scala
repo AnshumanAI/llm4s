@@ -1,0 +1,136 @@
+package org.llm4s.imagegeneration.provider
+
+import org.llm4s.imagegeneration._
+import java.time.Instant
+import java.util.Base64
+
+class HuggingFaceClient(config: HuggingFaceConfig) extends ImageGenerationClient {
+  
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  
+  override def generateImage(
+    prompt: String,
+    options: ImageGenerationOptions = ImageGenerationOptions()
+  ): Either[ImageGenerationError, GeneratedImage] = {
+    generateImages(prompt, 1, options).map(_.head)
+  }
+  
+  override def generateImages(
+    prompt: String,
+    count: Int,
+    options: ImageGenerationOptions = ImageGenerationOptions()
+  ): Either[ImageGenerationError, Seq[GeneratedImage]] = {
+    
+    if (prompt.trim.isEmpty) {
+      return Left(ValidationError("Prompt cannot be empty"))
+    }
+    
+    if (count <= 0 || count > 4) {
+      return Left(ValidationError("Count must be between 1 and 4 for HuggingFace"))
+    }
+    
+    try {
+      logger.info(s"Generating $count image(s) with HuggingFace: '$prompt'")
+      
+      val payload = buildPayload(prompt, options)
+      val response = makeHttpRequest(payload)
+      
+      if (response.statusCode == 200) {
+        val imageData = response.bytes
+        val base64Data = Base64.getEncoder.encodeToString(imageData)
+        
+        val images = (1 to count).map { i =>
+          GeneratedImage(
+            data = base64Data,
+            format = options.format,
+            size = options.size,
+            prompt = prompt,
+            seed = options.seed.map(_ + i),
+            createdAt = Instant.now()
+          )
+        }
+        
+        Right(images)
+      } else {
+        val errorBody = response.text()
+        logger.error(s"HuggingFace API error: ${response.statusCode} - $errorBody")
+        Left(ServiceError(s"HuggingFace API error: $errorBody", response.statusCode))
+      }
+    } catch {
+      case e: requests.RequestsException =>
+        logger.error(s"Network error: ${e.getMessage}")
+        Left(ServiceError(s"Network error: ${e.getMessage}", 0))
+      case e: Exception =>
+        logger.error(s"Unexpected error: ${e.getMessage}")
+        Left(UnknownError(e))
+    }
+  }
+  
+  override def health(): Either[ImageGenerationError, ServiceStatus] = {
+    try {
+      val testUrl = s"https://api-inference.huggingface.co/models/${config.model}"
+      val headers = Map(
+        "Authorization" -> s"Bearer ${config.apiKey}",
+        "Content-Type" -> "application/json"
+      )
+      
+      val response = requests.get(testUrl, headers = headers, readTimeout = 10000)
+      
+      if (response.statusCode == 200) {
+        Right(ServiceStatus(
+          status = HealthStatus.Healthy,
+          message = "HuggingFace Inference API is responding"
+        ))
+      } else {
+        Right(ServiceStatus(
+          status = HealthStatus.Degraded,
+          message = s"Service returned status code: ${response.statusCode}"
+        ))
+      }
+    } catch {
+      case e: Exception =>
+        logger.warn(s"Health check failed: ${e.getMessage}")
+        Left(ServiceError(s"Health check failed: ${e.getMessage}", 0))
+    }
+  }
+  
+  private def buildPayload(prompt: String, options: ImageGenerationOptions): String = {
+    // Build JSON string manually to avoid ujson issues
+    val params = scala.collection.mutable.Map[String, Any](
+      "guidance_scale" -> options.guidanceScale,
+      "num_inference_steps" -> options.inferenceSteps
+    )
+    
+    options.negativePrompt.foreach(np => params("negative_prompt") = np)
+    options.seed.foreach(s => params("seed") = s)
+    
+    // Simple JSON construction
+    val paramsJson = params.map { case (k, v) => 
+      v match {
+        case s: String => s""""$k": "$v""""
+        case n => s""""$k": $v"""
+      }
+    }.mkString(", ")
+    
+    s"""{"inputs": "$prompt", "parameters": {$paramsJson}}"""
+  }
+  
+  private def makeHttpRequest(payload: String): requests.Response = {
+    val url = s"https://api-inference.huggingface.co/models/${config.model}"
+    val headers = Map(
+      "Authorization" -> s"Bearer ${config.apiKey}",
+      "Content-Type" -> "application/json"
+    )
+    
+    logger.debug(s"Making request to: $url")
+    logger.debug(s"Payload: $payload")
+    
+    requests.post(
+      url = url,
+      data = payload,
+      headers = headers,
+      readTimeout = config.timeout,
+      connectTimeout = 10000
+    )
+  }
+} 
