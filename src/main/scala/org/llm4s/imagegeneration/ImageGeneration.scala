@@ -157,7 +157,13 @@ case class StableDiffusionConfig(
   def provider: ImageGenerationProvider = ImageGenerationProvider.StableDiffusion
 }
 
-/** Configuration for HuggingFace Inference API */
+/**
+ * Configuration for the HuggingFace Inference API.
+ *
+ * @param apiKey Your HuggingFace API token. This is required for authentication.
+ * @param model The identifier of the model to use on the HuggingFace Hub, e.g., "runwayml/stable-diffusion-v1-5".
+ * @param timeout Request timeout in milliseconds. Defaults to a higher value suitable for cloud APIs.
+ */
 case class HuggingFaceConfig(
   /** HuggingFace API token */
   apiKey: String,
@@ -229,6 +235,24 @@ object ImageGeneration {
     apiKey: Option[String] = None
   ): ImageGenerationClient = {
     val config = StableDiffusionConfig(baseUrl = baseUrl, apiKey = apiKey)
+    client(config)
+  }
+
+  /**
+   * Get a HuggingFace client with the required API key.
+   *
+   * This is a convenience method for creating a client that connects to the
+   * HuggingFace Inference API for image generation.
+   *
+   * @param apiKey Your HuggingFace API token (required).
+   * @param model The specific model to use for generation. Defaults to a standard Stable Diffusion model.
+   * @return An `ImageGenerationClient` instance configured for HuggingFace.
+   */
+  def huggingFaceClient(
+    apiKey: String,
+    model: String = "stabilityai/stable-diffusion-xl-base-1.0"
+  ): ImageGenerationClient = {
+    val config = HuggingFaceConfig(apiKey = apiKey, model = model)
     client(config)
   }
 

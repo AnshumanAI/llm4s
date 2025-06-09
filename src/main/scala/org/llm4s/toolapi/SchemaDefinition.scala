@@ -24,7 +24,7 @@ case class StringSchema(
       "description" -> ujson.Str(description)
     )
 
-    enumValues.foreach(values => base("enum") = ujson.Arr.from(values.map(ujson.Str(_))))
+    enumValues.foreach(values => base("enum") = ujson.Arr(values.map(ujson.Str(_)):_*))
     minLength.foreach(min => base("minLength") = ujson.Num(min))
     maxLength.foreach(max => base("maxLength") = ujson.Num(max))
 
@@ -182,7 +182,7 @@ case class ObjectSchema[T](
       "type"                 -> ujson.Str("object"),
       "description"          -> ujson.Str(description),
       "properties"           -> props,
-      "required"             -> ujson.Arr.from(required.map(ujson.Str(_))),
+      "required"             -> ujson.Arr(required.map(ujson.Str(_)):_*),
       "additionalProperties" -> ujson.Bool(additionalProperties)
     )
   }
@@ -207,7 +207,7 @@ case class NullableSchema[T](
         schema("type") = ujson.Arr(ujson.Str(typeValue), ujson.Str("null"))
       case Some(arr: ujson.Arr) =>
         // Add null to existing type array
-        schema("type") = arr.value :+ ujson.Str("null")
+        schema("type") = ujson.Arr.from(arr.value :+ ujson.Str("null"))
       case _ =>
         // Create new type array if none exists
         schema("type") = ujson.Arr(ujson.Str("null"))

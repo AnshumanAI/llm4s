@@ -1,0 +1,20 @@
+[info] welcome to sbt 1.11.0 (Microsoft Java 17.0.14)
+[info] loading settings for project llm4s-build-build-build from metals.sbt...
+[info] loading project definition from C:\Users\mcs\milestone1llm4s\llm4s\project\project\project
+[info] loading settings for project llm4s-build-build from metals.sbt...
+[info] loading project definition from C:\Users\mcs\milestone1llm4s\llm4s\project\project
+[success] Generated .bloop\llm4s-build-build.json
+[success] Total time: 7 s, completed Jun 9, 2025, 6:17:30 PM
+[info] loading settings for project llm4s-build from metals.sbt, plugins.sbt...
+[info] loading project definition from C:\Users\mcs\milestone1llm4s\llm4s\project
+[success] Generated .bloop\llm4s-build.json
+[success] Total time: 5 s, completed Jun 9, 2025, 6:17:36 PM
+[info] loading settings for project root from build.sbt...
+[info] set current project to llm4s (in build file:/C:/Users/mcs/milestone1llm4s/llm4s/)
+[error] Not a valid command: Compile (similar: compileAll, completions)
+[error] Not a valid project ID: Compile (similar: samples)
+[error] Expected ':'
+[error] Expected '/'
+[error] Not a valid key: Compile (similar: compile, compilers, compileJava)
+[error] Compile
+[error]        ^

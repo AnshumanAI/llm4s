@@ -149,12 +149,11 @@ class ImageGenerationTest extends AnyFunSuite with Matchers {
     client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
   }
 
-  test("ImageGeneration only supports StableDiffusion for now") {
-    // Only StableDiffusion is implemented in this milestone
-    val config = StableDiffusionConfig()
+  test("ImageGeneration creates correct client for HuggingFace config") {
+    val config = HuggingFaceConfig(apiKey = "test-key")
     val client = ImageGeneration.client(config)
-    
-    client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
+
+    client shouldBe a[org.llm4s.imagegeneration.provider.HuggingFaceClient]
   }
 
   test("stableDiffusionClient creates client with correct config") {
@@ -166,24 +165,44 @@ class ImageGenerationTest extends AnyFunSuite with Matchers {
     client shouldBe a[org.llm4s.imagegeneration.provider.StableDiffusionClient]
   }
 
+  test("huggingFaceClient creates client with correct config") {
+    val client = ImageGeneration.huggingFaceClient(apiKey = "test-key")
+
+    client shouldBe a[org.llm4s.imagegeneration.provider.HuggingFaceClient]
+  }
+
   test("Config objects have correct default values") {
     val sdConfig = StableDiffusionConfig()
     sdConfig.baseUrl shouldBe "http://localhost:7860"
     sdConfig.apiKey shouldBe None
     sdConfig.timeout shouldBe 60000
     sdConfig.provider shouldBe ImageGenerationProvider.StableDiffusion
+
+    val hfConfig = HuggingFaceConfig(apiKey = "test-key")
+    hfConfig.model shouldBe "stabilityai/stable-diffusion-xl-base-1.0"
+    hfConfig.timeout shouldBe 120000
+    hfConfig.provider shouldBe ImageGenerationProvider.HuggingFace
   }
 
   test("Config objects can be customized") {
-    val customConfig = StableDiffusionConfig(
+    val customSdConfig = StableDiffusionConfig(
       baseUrl = "http://custom:9000",
       apiKey = Some("custom-key"),
       timeout = 120000
     )
     
-    customConfig.baseUrl shouldBe "http://custom:9000"
-    customConfig.apiKey shouldBe Some("custom-key")
-    customConfig.timeout shouldBe 120000
+    customSdConfig.baseUrl shouldBe "http://custom:9000"
+    customSdConfig.apiKey shouldBe Some("custom-key")
+    customSdConfig.timeout shouldBe 120000
+
+    val customHfConfig = HuggingFaceConfig(
+      apiKey = "custom-key",
+      model = "custom-model",
+      timeout = 120000
+    )
+
+    customHfConfig.model shouldBe "custom-model"
+    customHfConfig.timeout shouldBe 120000
   }
 
   // ===== MOCK CLIENT TESTS =====

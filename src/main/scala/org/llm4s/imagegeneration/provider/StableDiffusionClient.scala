@@ -2,6 +2,28 @@ package org.llm4s.imagegeneration.provider
 
 import org.llm4s.imagegeneration._
 import org.slf4j.LoggerFactory
+import upickle.default._
+
+/**
+ * Represents the JSON payload for the Stable Diffusion WebUI API's text-to-image endpoint.
+ * This case class ensures type-safe construction of the request body.
+ */
+case class StableDiffusionPayload(
+  prompt: String,
+  negative_prompt: String,
+  width: Int,
+  height: Int,
+  steps: Int,
+  cfg_scale: Double,
+  batch_size: Int,
+  n_iter: Int,
+  seed: Long,
+  sampler_name: String
+)
+
+object StableDiffusionPayload {
+  implicit val writer: Writer[StableDiffusionPayload] = macroW
+}
 
 /**
  * Stable Diffusion WebUI API client for image generation.
@@ -96,20 +118,19 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
     count: Int,
     options: ImageGenerationOptions
   ): ujson.Value = {
-    val negativePrompt = options.negativePrompt.getOrElse("")
-    val seed = options.seed.getOrElse(-1L)
-    ujson.Obj(
-      "prompt" -> prompt,
-      "negative_prompt" -> negativePrompt,
-      "width" -> options.size.width,
-      "height" -> options.size.height,
-      "steps" -> options.inferenceSteps,
-      "cfg_scale" -> options.guidanceScale,
-      "batch_size" -> count,
-      "n_iter" -> 1,
-      "seed" -> seed,
-      "sampler_name" -> "Euler a"
+    val payload = StableDiffusionPayload(
+      prompt = prompt,
+      negative_prompt = options.negativePrompt.getOrElse(""),
+      width = options.size.width,
+      height = options.size.height,
+      steps = options.inferenceSteps,
+      cfg_scale = options.guidanceScale,
+      batch_size = count,
+      n_iter = 1,
+      seed = options.seed.getOrElse(-1L),
+      sampler_name = "Euler a"
     )
+    writeJs(payload)
   }
   
   private def makeHttpRequest(payload: ujson.Value): requests.Response = {
@@ -119,11 +140,11 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
     ) ++ config.apiKey.map(key => "Authorization" -> s"Bearer $key").toMap
     
     logger.debug(s"Making request to: $url")
-    logger.debug(s"Payload: ${ujson.write(payload, indent = 2)}")
+    logger.debug(s"Payload: ${write(payload, indent = 2)}")
     
     requests.post(
       url = url,
-      data = ujson.write(payload),
+      data = write(payload),
       headers = headers,
       readTimeout = config.timeout,
       connectTimeout = 10000
@@ -143,7 +164,7 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
     }
     
     try {
-      val responseJson = ujson.read(response.text())
+      val responseJson = read[ujson.Value](response.text())
       val images = responseJson("images").arr
       
       if (images.isEmpty) {
