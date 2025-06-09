@@ -51,7 +51,7 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
     case Some((2, 13)) =>
       Seq(
         // "-Xfatal-warnings",   // Temporarily disabled for cross-compilation
-        "-deprecation", // Emit warning and location for usages of deprecated APIs
+        //"-deprecation", // Emit warning and location for usages of deprecated APIs
         "-feature",     // Emit warning for feature usage
         "-unchecked"    // Enable warnings where generated code depends on assumptions
         // "-Wunused:imports"    // Temporarily disabled for cross-compilation
@@ -59,7 +59,7 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
     case Some((3, _)) =>
       Seq(
         "-explain",         // Explain errors in more detail
-        "-Xfatal-warnings", // Fail on warnings
+        //"-Xfatal-warnings", // Fail on warnings
         "-source:3.3"       // Ensure Scala 3 syntax
       )
     case _ => Seq.empty

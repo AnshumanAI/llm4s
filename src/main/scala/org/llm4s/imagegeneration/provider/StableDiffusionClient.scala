@@ -49,8 +49,8 @@ object StableDiffusionPayload {
  * )
  * 
  * client.generateImage("a beautiful landscape", options) match {
- *   case Right(image) => println(s"Generated image: ${image.size}")
- *   case Left(error) => println(s"Error: ${error.message}")
+ *   case Right(image) => println(s"Generated image: $${image.size}")
+ *   case Left(error) => println(s"Error: $${error.message}")
  * }
  * }}}
  */

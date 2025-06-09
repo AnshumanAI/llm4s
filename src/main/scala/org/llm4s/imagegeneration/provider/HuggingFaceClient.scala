@@ -22,8 +22,8 @@ import java.util.Base64
  * val client = new HuggingFaceClient(config)
  * 
  * client.generateImage("a beautiful sunset over mountains") match {
- *   case Right(image) => println(s"Generated image: ${image.size}")
- *   case Left(error) => println(s"Error: ${error.message}")
+ *   case Right(image) => println(s"Generated image: $${image.size}")
+ *   case Left(error) => println(s"Error: $${error.message}")
  * }
  * }}}
  */
