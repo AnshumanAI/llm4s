@@ -3,6 +3,35 @@ package org.llm4s.imagegeneration.provider
 import org.llm4s.imagegeneration._
 import org.slf4j.LoggerFactory
 
+/**
+ * Stable Diffusion WebUI API client for image generation.
+ * 
+ * This client connects to a locally hosted or remote Stable Diffusion WebUI instance
+ * through its REST API. It supports all the standard text-to-image generation features
+ * including custom sampling, guidance scale, negative prompts, and more.
+ * 
+ * @param config Configuration containing base URL, API key, and timeout settings
+ * 
+ * @example
+ * {{{
+ * val config = StableDiffusionConfig(
+ *   baseUrl = "http://localhost:7860",
+ *   apiKey = Some("your-api-key") // optional
+ * )
+ * val client = new StableDiffusionClient(config)
+ * 
+ * val options = ImageGenerationOptions(
+ *   size = ImageSize.Square512,
+ *   guidanceScale = 7.5,
+ *   negativePrompt = Some("blurry, low quality")
+ * )
+ * 
+ * client.generateImage("a beautiful landscape", options) match {
+ *   case Right(image) => println(s"Generated image: ${image.size}")
+ *   case Left(error) => println(s"Error: ${error.message}")
+ * }
+ * }}}
+ */
 class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerationClient {
   
   private val logger = LoggerFactory.getLogger(getClass)
@@ -67,16 +96,18 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
     count: Int,
     options: ImageGenerationOptions
   ): ujson.Value = {
+    val negativePrompt = options.negativePrompt.getOrElse("")
+    val seed = options.seed.getOrElse(-1L)
     ujson.Obj(
       "prompt" -> prompt,
-      "negative_prompt" -> options.negativePrompt.getOrElse(""),
+      "negative_prompt" -> negativePrompt,
       "width" -> options.size.width,
       "height" -> options.size.height,
       "steps" -> options.inferenceSteps,
       "cfg_scale" -> options.guidanceScale,
       "batch_size" -> count,
       "n_iter" -> 1,
-      "seed" -> options.seed.getOrElse(-1L),
+      "seed" -> seed,
       "sampler_name" -> "Euler a"
     )
   }

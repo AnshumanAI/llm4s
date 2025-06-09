@@ -188,8 +188,11 @@ lazy val crossTestScala2 = (project in file("crosstest/scala2"))
     crossScalaVersions := Seq(scala213),
     resolvers += Resolver.mavenLocal,
     resolvers += Resolver.defaultLocal,
-    libraryDependencies ++= crossLibDependencies
-  )
+    libraryDependencies ++= crossLibDependencies,
+    scalacOptions ++= Seq(
+      "-Ytasty-reader"
+    )
+  ).dependsOn(root)
 
 lazy val crossTestScala3 = (project in file("crosstest/scala3"))
   .settings(
@@ -206,7 +209,7 @@ lazy val crossTestScala3 = (project in file("crosstest/scala3"))
       "-Xfatal-warnings"
     ),
     libraryDependencies ++= crossLibDependencies
-  )
+  ).dependsOn(root)
 
 // Commands remain the same
 addCommandAlias("buildAll", ";clean;+compile;+test")
