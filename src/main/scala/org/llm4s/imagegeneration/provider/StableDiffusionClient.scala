@@ -18,7 +18,7 @@ case class StableDiffusionPayload(
   batch_size: Int,
   n_iter: Int,
   seed: Long,
-  sampler_name: String
+  sampler_name: String = "Euler a"  // Default sampler
 )
 
 object StableDiffusionPayload {
@@ -128,7 +128,7 @@ class StableDiffusionClient(config: StableDiffusionConfig) extends ImageGenerati
       batch_size = count,
       n_iter = 1,
       seed = options.seed.getOrElse(-1L),
-      sampler_name = "Euler a"
+      sampler_name = options.samplerName.getOrElse("Euler a")
     )
     writeJs(payload)
   }

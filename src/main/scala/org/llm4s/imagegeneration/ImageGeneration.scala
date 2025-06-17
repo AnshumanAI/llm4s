@@ -2,6 +2,8 @@ package org.llm4s.imagegeneration
 
 import java.time.Instant
 import java.nio.file.Path
+import org.llm4s.imagegeneration.provider.StableDiffusionClient
+import org.llm4s.imagegeneration.provider.HuggingFaceClient
 
 // ===== ERROR HANDLING =====
 
@@ -71,7 +73,8 @@ case class ImageGenerationOptions(
   seed: Option[Long] = None,
   guidanceScale: Double = 7.5,
   inferenceSteps: Int = 20,
-  negativePrompt: Option[String] = None
+  negativePrompt: Option[String] = None,
+  samplerName: Option[String] = None  // Optional sampler name
 )
 
 /** Service health status */
@@ -204,9 +207,9 @@ object ImageGeneration {
   def client(config: ImageGenerationConfig): ImageGenerationClient = {
     config match {
       case sdConfig: StableDiffusionConfig => 
-        new org.llm4s.imagegeneration.provider.StableDiffusionClient(sdConfig)
+        new StableDiffusionClient(sdConfig)
       case hfConfig: HuggingFaceConfig => 
-        new org.llm4s.imagegeneration.provider.HuggingFaceClient(hfConfig)
+        new HuggingFaceClient(hfConfig)
     }
   }
 
