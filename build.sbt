@@ -126,7 +126,6 @@ lazy val root = (project in file("."))
       "com.lihaoyi"                   %% "ujson" % "4.2.1",
       "org.apache.pdfbox" % "pdfbox" % "2.0.27",
       "org.apache.poi" % "poi-ooxml" % "5.2.3",
-      "com.lihaoyi" %% "requests" % "0.8.0",
       "org.jsoup" % "jsoup" % "1.17.2"
 
     )
@@ -196,7 +195,6 @@ lazy val crossLibDependencies = Def.setting {
     "com.lihaoyi"                   %% "ujson" % "4.2.1",
     "org.apache.pdfbox" % "pdfbox" % "2.0.27",
     "org.apache.poi" % "poi-ooxml" % "5.2.3",
-    "com.lihaoyi" %% "requests" % "0.8.0",
     "org.jsoup" % "jsoup" % "1.17.2"
 
   )
