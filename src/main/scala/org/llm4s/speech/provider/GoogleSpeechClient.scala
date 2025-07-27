@@ -1,7 +1,7 @@
 package org.llm4s.speech.provider
 
-import com.lihaoyi.requests.Response
-import com.lihaoyi.requests.Session
+import requests.Response
+import requests.Session
 import org.llm4s.speech._
 import org.llm4s.speech.config.GoogleSpeechConfig
 import org.llm4s.speech.model._
@@ -12,10 +12,6 @@ import java.util.Base64
 class GoogleSpeechClient(config: GoogleSpeechConfig) extends TTSClient with ASRClient {
 
   private val session = Session()
-    .headers(Map(
-      "Authorization" -> s"Bearer ${config.apiKey}",
-      "Content-Type" -> "application/json"
-    ))
 
   override def synthesize(
     text: String,
@@ -41,11 +37,15 @@ class GoogleSpeechClient(config: GoogleSpeechConfig) extends TTSClient with ASRC
 
       val response = session.post(
         s"${config.baseUrl}/text:synthesize",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Authorization" -> s"Bearer ${config.apiKey}",
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val responseJson = ujson.read(response.text())
+        val responseJson = ujson.read(response.text(), trace = false)
         val audioContent = responseJson("audioContent").str
         val audioData = Base64.getDecoder.decode(audioContent)
         
@@ -85,11 +85,15 @@ class GoogleSpeechClient(config: GoogleSpeechConfig) extends TTSClient with ASRC
 
       val response = session.post(
         s"${config.baseUrl}/speech:recognize",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Authorization" -> s"Bearer ${config.apiKey}",
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val responseJson = ujson.read(response.text())
+        val responseJson = ujson.read(response.text(), trace = false)
         val results = responseJson("results").arr
         
         if (results.nonEmpty) {
@@ -147,7 +151,7 @@ class GoogleSpeechClient(config: GoogleSpeechConfig) extends TTSClient with ASRC
 
   private def handleErrorResponse(response: Response): Either[SpeechError, Nothing] = {
     val errorBody = try {
-      ujson.read(response.text())
+      ujson.read(response.text(), trace = false)
     } catch {
       case _: Exception => Obj("error" -> Obj("message" -> response.text()))
     }

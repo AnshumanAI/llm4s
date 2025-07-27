@@ -9,10 +9,11 @@ import org.scalatest.matchers.should.Matchers
 class SpeechTest extends AnyFlatSpec with Matchers {
 
   "Speech object" should "provide factory methods" in {
-    // Test that the Speech object can be instantiated
+    // Test that the Speech object can be instantiated with explicit config
     noException should be thrownBy {
-      Speech.ttsClient()
-      Speech.asrClient()
+      val config = OpenAISpeechConfig("test-key", "tts-1")
+      Speech.ttsClient(SpeechProvider.OpenAI, config)
+      Speech.asrClient(SpeechProvider.OpenAI, config)
     }
   }
 

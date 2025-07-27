@@ -1,7 +1,7 @@
 package org.llm4s.speech.provider
 
-import com.lihaoyi.requests.Response
-import com.lihaoyi.requests.Session
+import requests.Response
+import requests.Session
 import org.llm4s.speech._
 import org.llm4s.speech.config.ElevenLabsConfig
 import org.llm4s.speech.model._
@@ -10,10 +10,6 @@ import ujson._
 class ElevenLabsClient(config: ElevenLabsConfig) extends TTSClient {
 
   private val session = Session()
-    .headers(Map(
-      "xi-api-key" -> config.apiKey,
-      "Content-Type" -> "application/json"
-    ))
 
   override def synthesize(
     text: String,
@@ -33,11 +29,15 @@ class ElevenLabsClient(config: ElevenLabsConfig) extends TTSClient {
 
       val response = session.post(
         s"${config.baseUrl}/text-to-speech/${options.voice}",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "xi-api-key" -> config.apiKey,
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val audioData = response.bytes()
+        val audioData = response.bytes
         Right(AudioResponse(
           audioData = audioData,
           format = "mp3"
@@ -53,7 +53,7 @@ class ElevenLabsClient(config: ElevenLabsConfig) extends TTSClient {
 
   private def handleErrorResponse(response: Response): Either[SpeechError, Nothing] = {
     val errorBody = try {
-      ujson.read(response.text())
+      ujson.read(response.text(), trace = false)
     } catch {
       case _: Exception => Obj("error" -> Obj("message" -> response.text()))
     }

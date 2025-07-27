@@ -1,7 +1,7 @@
 package org.llm4s.speech.provider
 
-import com.lihaoyi.requests.Response
-import com.lihaoyi.requests.Session
+import requests.Response
+import requests.Session
 import org.llm4s.speech._
 import org.llm4s.speech.config.OpenAISpeechConfig
 import org.llm4s.speech.model._
@@ -12,10 +12,6 @@ import java.util.Base64
 class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRClient {
 
   private val session = Session()
-    .headers(Map(
-      "Authorization" -> s"Bearer ${config.apiKey}",
-      "Content-Type" -> "application/json"
-    ))
 
   override def synthesize(
     text: String,
@@ -32,11 +28,15 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
 
       val response = session.post(
         s"${config.baseUrl}/audio/speech",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Authorization" -> s"Bearer ${config.apiKey}",
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val audioData = response.bytes()
+        val audioData = response.bytes
         Right(AudioResponse(
           audioData = audioData,
           format = options.responseFormat
@@ -58,21 +58,27 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
       // Convert audio data to base64
       val base64Audio = Base64.getEncoder.encodeToString(audioData)
       
-      val requestBody = Obj(
+      val baseObj = Obj(
         "model" -> options.model,
         "file" -> base64Audio,
         "response_format" -> options.responseFormat,
         "temperature" -> options.temperature
-      ) ++ options.language.map(lang => Obj("language" -> lang)).getOrElse(Obj()) ++
-        options.prompt.map(prompt => Obj("prompt" -> prompt)).getOrElse(Obj())
+      )
+      
+      val withLanguage = options.language.map(lang => baseObj.obj + ("language" -> Str(lang))).getOrElse(baseObj.obj)
+      val requestBody = options.prompt.map(prompt => withLanguage + ("prompt" -> Str(prompt))).getOrElse(withLanguage)
 
       val response = session.post(
         s"${config.baseUrl}/audio/transcriptions",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Authorization" -> s"Bearer ${config.apiKey}",
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val responseJson = ujson.read(response.text())
+        val responseJson = ujson.read(response.text(), trace = false)
         val text = responseJson("text").str
         val language = responseJson.obj.get("language").map(_.str)
         
@@ -108,7 +114,7 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
 
   private def handleErrorResponse(response: Response): Either[SpeechError, Nothing] = {
     val errorBody = try {
-      ujson.read(response.text())
+      ujson.read(response.text(), trace = false)
     } catch {
       case _: Exception => Obj("error" -> Obj("message" -> response.text()))
     }

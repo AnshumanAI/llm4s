@@ -1,7 +1,7 @@
 package org.llm4s.speech.provider
 
-import com.lihaoyi.requests.Response
-import com.lihaoyi.requests.Session
+import requests.Response
+import requests.Session
 import org.llm4s.speech._
 import org.llm4s.speech.config.AzureSpeechConfig
 import org.llm4s.speech.model._
@@ -12,11 +12,6 @@ import java.util.Base64
 class AzureSpeechClient(config: AzureSpeechConfig) extends TTSClient with ASRClient {
 
   private val session = Session()
-    .headers(Map(
-      "Ocp-Apim-Subscription-Key" -> config.apiKey,
-      "Content-Type" -> "application/json",
-      "X-Microsoft-OutputFormat" -> "audio-16khz-128kbitrate-mono-mp3"
-    ))
 
   override def synthesize(
     text: String,
@@ -29,11 +24,16 @@ class AzureSpeechClient(config: AzureSpeechConfig) extends TTSClient with ASRCli
 
       val response = session.post(
         s"${config.baseUrl.format(config.region)}/synthesize",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Ocp-Apim-Subscription-Key" -> config.apiKey,
+          "Content-Type" -> "application/json",
+          "X-Microsoft-OutputFormat" -> "audio-16khz-128kbitrate-mono-mp3"
+        )
       )
 
       if (response.statusCode == 200) {
-        val audioData = response.bytes()
+        val audioData = response.bytes
         Right(AudioResponse(
           audioData = audioData,
           format = "mp3"
@@ -64,11 +64,15 @@ class AzureSpeechClient(config: AzureSpeechConfig) extends TTSClient with ASRCli
 
       val response = session.post(
         s"${config.baseUrl.format(config.region)}/speechtotext/v3.0/transcriptions",
-        data = requestBody.render()
+        data = requestBody.render(),
+        headers = Map(
+          "Ocp-Apim-Subscription-Key" -> config.apiKey,
+          "Content-Type" -> "application/json"
+        )
       )
 
       if (response.statusCode == 200) {
-        val responseJson = ujson.read(response.text())
+        val responseJson = ujson.read(response.text(), trace = false)
         val text = responseJson("DisplayText").str
         val language = responseJson.obj.get("Language").map(_.str)
         
@@ -97,7 +101,7 @@ class AzureSpeechClient(config: AzureSpeechConfig) extends TTSClient with ASRCli
 
   private def handleErrorResponse(response: Response): Either[SpeechError, Nothing] = {
     val errorBody = try {
-      ujson.read(response.text())
+      ujson.read(response.text(), trace = false)
     } catch {
       case _: Exception => Obj("error" -> Obj("message" -> response.text()))
     }
