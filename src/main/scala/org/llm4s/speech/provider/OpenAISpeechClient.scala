@@ -66,8 +66,10 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
         "temperature"     -> options.temperature
       )
 
-      val withLanguage = options.language.map(lang => baseObj.obj ++ Map("language" -> Str(lang))).getOrElse(baseObj.obj)
-      val requestBody  = options.prompt.map(prompt => withLanguage ++ Map("prompt" -> Str(prompt))).getOrElse(withLanguage)
+      val withLanguage =
+        options.language.map(lang => baseObj.obj ++ Map("language" -> Str(lang))).getOrElse(baseObj.obj)
+      val requestBody =
+        options.prompt.map(prompt => withLanguage ++ Map("prompt" -> Str(prompt))).getOrElse(withLanguage)
 
       val response = session.post(
         s"${config.baseUrl}/audio/transcriptions",
