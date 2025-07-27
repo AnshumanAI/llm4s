@@ -16,14 +16,14 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
   override def synthesize(
     text: String,
     options: TTSSynthesisOptions
-  ): Either[SpeechError, AudioResponse] = {
+  ): Either[SpeechError, AudioResponse] =
     try {
       val requestBody = Obj(
-        "model" -> options.model,
-        "input" -> text,
-        "voice" -> options.voice,
+        "model"           -> options.model,
+        "input"           -> text,
+        "voice"           -> options.voice,
         "response_format" -> options.responseFormat,
-        "speed" -> options.speed
+        "speed"           -> options.speed
       )
 
       val response = session.post(
@@ -31,16 +31,18 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
         data = requestBody.render(),
         headers = Map(
           "Authorization" -> s"Bearer ${config.apiKey}",
-          "Content-Type" -> "application/json"
+          "Content-Type"  -> "application/json"
         )
       )
 
       if (response.statusCode == 200) {
         val audioData = response.bytes
-        Right(AudioResponse(
-          audioData = audioData,
-          format = options.responseFormat
-        ))
+        Right(
+          AudioResponse(
+            audioData = audioData,
+            format = options.responseFormat
+          )
+        )
       } else {
         handleErrorResponse(response)
       }
@@ -48,61 +50,65 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
       case e: Exception =>
         Left(SpeechUnknownError(e))
     }
-  }
 
   override def transcribe(
     audioData: Array[Byte],
     options: ASRTranscriptionOptions
-  ): Either[SpeechError, TranscriptionResponse] = {
+  ): Either[SpeechError, TranscriptionResponse] =
     try {
       // Convert audio data to base64
       val base64Audio = Base64.getEncoder.encodeToString(audioData)
-      
+
       val baseObj = Obj(
-        "model" -> options.model,
-        "file" -> base64Audio,
+        "model"           -> options.model,
+        "file"            -> base64Audio,
         "response_format" -> options.responseFormat,
-        "temperature" -> options.temperature
+        "temperature"     -> options.temperature
       )
-      
+
       val withLanguage = options.language.map(lang => baseObj.obj + ("language" -> Str(lang))).getOrElse(baseObj.obj)
-      val requestBody = options.prompt.map(prompt => withLanguage + ("prompt" -> Str(prompt))).getOrElse(withLanguage)
+      val requestBody  = options.prompt.map(prompt => withLanguage + ("prompt" -> Str(prompt))).getOrElse(withLanguage)
 
       val response = session.post(
         s"${config.baseUrl}/audio/transcriptions",
         data = requestBody.render(),
         headers = Map(
           "Authorization" -> s"Bearer ${config.apiKey}",
-          "Content-Type" -> "application/json"
+          "Content-Type"  -> "application/json"
         )
       )
 
       if (response.statusCode == 200) {
         val responseJson = ujson.read(response.text(), trace = false)
-        val text = responseJson("text").str
-        val language = responseJson.obj.get("language").map(_.str)
-        
-        val segments = responseJson.obj.get("segments").map { segmentsJson =>
-          segmentsJson.arr.map { segment =>
-            TranscriptionSegment(
-              id = segment("id").num.toInt,
-              start = segment("start").num,
-              end = segment("end").num,
-              text = segment("text").str,
-              tokens = segment.obj.get("tokens").map(_.arr.map(_.num.toInt).toSeq).getOrElse(Seq.empty),
-              temperature = segment.obj.get("temperature").map(_.num),
-              avgLogprob = segment.obj.get("avg_logprob").map(_.num),
-              compressionRatio = segment.obj.get("compression_ratio").map(_.num),
-              noSpeechProb = segment.obj.get("no_speech_prob").map(_.num)
-            )
-          }.toSeq
-        }.getOrElse(Seq.empty)
+        val text         = responseJson("text").str
+        val language     = responseJson.obj.get("language").map(_.str)
 
-        Right(TranscriptionResponse(
-          text = text,
-          language = language,
-          segments = segments
-        ))
+        val segments = responseJson.obj
+          .get("segments")
+          .map { segmentsJson =>
+            segmentsJson.arr.map { segment =>
+              TranscriptionSegment(
+                id = segment("id").num.toInt,
+                start = segment("start").num,
+                end = segment("end").num,
+                text = segment("text").str,
+                tokens = segment.obj.get("tokens").map(_.arr.map(_.num.toInt).toSeq).getOrElse(Seq.empty),
+                temperature = segment.obj.get("temperature").map(_.num),
+                avgLogprob = segment.obj.get("avg_logprob").map(_.num),
+                compressionRatio = segment.obj.get("compression_ratio").map(_.num),
+                noSpeechProb = segment.obj.get("no_speech_prob").map(_.num)
+              )
+            }.toSeq
+          }
+          .getOrElse(Seq.empty)
+
+        Right(
+          TranscriptionResponse(
+            text = text,
+            language = language,
+            segments = segments
+          )
+        )
       } else {
         handleErrorResponse(response)
       }
@@ -110,23 +116,26 @@ class OpenAISpeechClient(config: OpenAISpeechConfig) extends TTSClient with ASRC
       case e: Exception =>
         Left(SpeechUnknownError(e))
     }
-  }
 
   private def handleErrorResponse(response: Response): Either[SpeechError, Nothing] = {
-    val errorBody = try {
-      ujson.read(response.text(), trace = false)
-    } catch {
-      case _: Exception => Obj("error" -> Obj("message" -> response.text()))
-    }
+    val errorBody =
+      try
+        ujson.read(response.text(), trace = false)
+      catch {
+        case _: Exception => Obj("error" -> Obj("message" -> response.text()))
+      }
 
-    val errorMessage = errorBody.obj.get("error").flatMap(_.obj.get("message")).map(_.str)
+    val errorMessage = errorBody.obj
+      .get("error")
+      .flatMap(_.obj.get("message"))
+      .map(_.str)
       .getOrElse(s"HTTP ${response.statusCode}: ${response.text()}")
 
     response.statusCode match {
       case 401 => Left(SpeechAuthenticationError(errorMessage))
       case 429 => Left(SpeechRateLimitError(errorMessage))
       case 400 => Left(SpeechValidationError(errorMessage))
-      case _ => Left(SpeechUnknownError(new Exception(errorMessage)))
+      case _   => Left(SpeechUnknownError(new Exception(errorMessage)))
     }
   }
 }

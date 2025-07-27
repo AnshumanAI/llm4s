@@ -24,9 +24,8 @@ object Speech {
     provider: SpeechProvider,
     config: SpeechProviderConfig,
     options: TTSSynthesisOptions = TTSSynthesisOptions()
-  ): Either[SpeechError, AudioResponse] = {
+  ): Either[SpeechError, AudioResponse] =
     ttsClient(provider, config).synthesize(text, options)
-  }
 
   /** Convenience method for quick speech-to-text conversion */
   def transcribe(
@@ -34,9 +33,8 @@ object Speech {
     provider: SpeechProvider,
     config: SpeechProviderConfig,
     options: ASRTranscriptionOptions = ASRTranscriptionOptions()
-  ): Either[SpeechError, TranscriptionResponse] = {
+  ): Either[SpeechError, TranscriptionResponse] =
     asrClient(provider, config).transcribe(audioData, options)
-  }
 
   /** Get a TTS client based on environment variables */
   def ttsClient(): TTSClient = SpeechConnect.getTTSClient()
@@ -48,15 +46,13 @@ object Speech {
   def synthesizeWithEnv(
     text: String,
     options: TTSSynthesisOptions = TTSSynthesisOptions()
-  ): Either[SpeechError, AudioResponse] = {
+  ): Either[SpeechError, AudioResponse] =
     ttsClient().synthesize(text, options)
-  }
 
   /** Convenience method for quick speech-to-text using environment variables */
   def transcribeWithEnv(
     audioData: Array[Byte],
     options: ASRTranscriptionOptions = ASRTranscriptionOptions()
-  ): Either[SpeechError, TranscriptionResponse] = {
+  ): Either[SpeechError, TranscriptionResponse] =
     asrClient().transcribe(audioData, options)
-  }
 }

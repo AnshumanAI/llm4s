@@ -1,6 +1,12 @@
 package org.llm4s.speech
 
-import org.llm4s.speech.config.{AzureSpeechConfig, ElevenLabsConfig, GoogleSpeechConfig, OpenAISpeechConfig, SpeechProviderConfig}
+import org.llm4s.speech.config.{
+  AzureSpeechConfig,
+  ElevenLabsConfig,
+  GoogleSpeechConfig,
+  OpenAISpeechConfig,
+  SpeechProviderConfig
+}
 import org.llm4s.speech.provider.{
   AzureSpeechClient,
   ElevenLabsClient,

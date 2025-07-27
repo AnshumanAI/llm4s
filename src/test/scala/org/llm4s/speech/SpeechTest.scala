@@ -36,23 +36,23 @@ class SpeechTest extends AnyFlatSpec with Matchers {
   "SpeechError" should "handle different error types" in {
     val authError = SpeechAuthenticationError("Invalid API key")
     authError.message shouldBe "Invalid API key"
-    
+
     val rateLimitError = SpeechRateLimitError("Rate limit exceeded")
     rateLimitError.message shouldBe "Rate limit exceeded"
-    
+
     val validationError = SpeechValidationError("Invalid input")
     validationError.message shouldBe "Invalid input"
   }
 
   "AudioResponse" should "contain audio data" in {
     val audioData = Array[Byte](1, 2, 3, 4)
-    val response = AudioResponse(audioData, "mp3")
+    val response  = AudioResponse(audioData, "mp3")
     response.audioData shouldBe audioData
     response.format shouldBe "mp3"
   }
 
   "TranscriptionResponse" should "contain transcription data" in {
-    val text = "Hello world"
+    val text     = "Hello world"
     val response = TranscriptionResponse(text)
     response.text shouldBe text
     response.language shouldBe None
