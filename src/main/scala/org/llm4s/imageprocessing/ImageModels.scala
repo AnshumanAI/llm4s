@@ -102,7 +102,9 @@ case class ProcessedImage(
       
       // Validate path for security (prevent path traversal)
       val normalizedPath = path.normalize()
-      if (!normalizedPath.startsWith(path.getFileSystem.getPath(".").normalize())) {
+      val currentDir = path.getFileSystem.getPath(".").normalize()
+      if (normalizedPath.startsWith(currentDir.resolve("..")) || 
+          normalizedPath.startsWith(currentDir.resolve("../"))) {
         return Left(LLMError.invalidImageInput("path", path.toString, "Path traversal detected"))
       }
       

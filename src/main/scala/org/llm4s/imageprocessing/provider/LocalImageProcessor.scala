@@ -1,7 +1,7 @@
 package org.llm4s.imageprocessing.provider
 
 import org.llm4s.imageprocessing._
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 import java.awt.image.BufferedImage
 import java.awt.{ RenderingHints, Color }
 import java.io.{ ByteArrayOutputStream, File }
@@ -24,7 +24,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val bufferedImage = ImageIO.read(new File(imagePath))
       if (bufferedImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val metadata      = extractImageMetadata(imagePath, bufferedImage)
@@ -42,7 +42,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error analyzing image: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("analyze", s"Error analyzing image: ${e.getMessage}", Some(e)))
     }
 
   override def preprocessImage(
@@ -52,7 +52,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val originalImage = ImageIO.read(new File(imagePath))
       if (originalImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val processedImage = operations.foldLeft(originalImage)((img, operation) => applyOperation(img, operation))
@@ -75,7 +75,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error processing image: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("process", s"Error processing image: ${e.getMessage}", Some(e)))
     }
 
   override def convertFormat(
@@ -85,7 +85,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val originalImage = ImageIO.read(new File(imagePath))
       if (originalImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val imageData = convertToByteArray(originalImage, targetFormat)
@@ -105,7 +105,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error converting image format: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("convert", s"Error converting image format: ${e.getMessage}", Some(e)))
     }
 
   override def resizeImage(

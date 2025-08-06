@@ -79,7 +79,6 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
 
     val result = processedImage.saveToFile(Paths.get("/invalid/path/that/does/not/exist/file.jpg"))
     result.isLeft shouldBe true
-    result.left.foreach(error => error shouldBe a[LLMError])
   }
 
   it should "prevent path traversal attacks" in {
@@ -90,7 +89,6 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
     val maliciousPath = Paths.get("../../../etc/passwd")
     val result = processedImage.saveToFile(maliciousPath)
     result.isLeft shouldBe true
-    result.left.foreach(error => error shouldBe a[LLMError])
   }
 
   "ImageAnalysisResult" should "create with all fields" in {

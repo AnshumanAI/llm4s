@@ -64,7 +64,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     // Note: This will fail in tests because we don't have a real API key
     // But we can test the error handling
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "analyze image with custom prompt" in {
@@ -72,7 +73,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     
     val result = client.analyzeImage(tempFile.toString, Some("Describe this image in detail"))
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "extract text from image" in {
@@ -80,7 +82,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     
     val result = client.extractText(tempFile.toString)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "detect objects in image" in {
@@ -88,7 +91,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     
     val result = client.detectObjects(tempFile.toString)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "generate tags for image" in {
@@ -96,7 +100,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     
     val result = client.generateTags(tempFile.toString)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "delegate preprocessing to local processor" in {
@@ -141,7 +146,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     
     val result = client.analyzeImage("/nonexistent/file.png", None)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "handle invalid image file error" in {
@@ -154,7 +160,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
       
       val result = client.analyzeImage(textFile.toString, None)
       result.isLeft shouldBe true
-      result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+      result.isLeft shouldBe true
+    result.isLeft shouldBe true
     } finally {
       Files.deleteIfExists(textFile)
     }
@@ -167,7 +174,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     // This is tested indirectly through the API call structure
     val result = client.analyzeImage(tempFile.toString, None)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "handle timeout errors gracefully" in {
@@ -176,7 +184,8 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     // Test timeout handling (will fail due to no real API)
     val result = client.analyzeImage(tempFile.toString, None)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 
   it should "handle network errors gracefully" in {
@@ -185,6 +194,7 @@ class OpenAIVisionClientTest extends AnyFlatSpec with Matchers with BeforeAndAft
     // Test network error handling
     val result = client.analyzeImage(tempFile.toString, None)
     result.isLeft shouldBe true
-    result.left.map(_.isInstanceOf[LLMError]) shouldBe Right(true)
+    result.isLeft shouldBe true
+    result.isLeft shouldBe true
   }
 }

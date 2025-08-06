@@ -2,7 +2,7 @@ package org.llm4s.imageprocessing.provider
 
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.AnthropicVisionConfig
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 import java.time.Instant
 import java.util.Base64
 import java.nio.file.{ Files, Paths }
@@ -29,7 +29,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
       val base64Image = encodeImageToBase64(imagePath) match {
         case Success(encoded) => encoded
         case Failure(exception) =>
-          return Left(LLMError.ProcessingError(s"Failed to encode image: ${exception.getMessage}"))
+          return Left(LLMError.processingFailed("encode", s"Failed to encode image: ${exception.getMessage}", Some(exception)))
       }
 
       // Call Anthropic Vision API
@@ -44,7 +44,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
       val visionResponse = callAnthropicVisionAPI(base64Image, analysisPrompt, mediaType) match {
         case Success(response) => response
         case Failure(exception) =>
-          return Left(LLMError.APIError(s"Anthropic Vision API call failed: ${exception.getMessage}"))
+          return Left(LLMError.apiCallFailed("Anthropic", s"Anthropic Vision API call failed: ${exception.getMessage}"))
       }
 
       // Parse the response and extract structured information
@@ -53,7 +53,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
 
     } catch {
       case e: Exception =>
-        Left(LLMError.ProcessingError(s"Error analyzing image with Anthropic Vision: ${e.getMessage}"))
+        Left(LLMError.processingFailed("analyze", s"Error analyzing image with Anthropic Vision: ${e.getMessage}", Some(e)))
     }
 
   override def preprocessImage(
