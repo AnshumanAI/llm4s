@@ -116,7 +116,7 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
 
   // Private helper methods
 
-  private def encodeImageToBase64(imagePath: String): Try[String] =
+  def encodeImageToBase64(imagePath: String): Try[String] =
     Try {
       val imageBytes = Files.readAllBytes(Paths.get(imagePath))
       Base64.getEncoder.encodeToString(imageBytes)

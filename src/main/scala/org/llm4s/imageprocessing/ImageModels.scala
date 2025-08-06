@@ -2,6 +2,7 @@ package org.llm4s.imageprocessing
 
 import java.nio.file.Path
 import java.time.Instant
+import org.llm4s.error.LLMError
 
 /**
  * Represents different image formats supported by the system.
@@ -95,13 +96,27 @@ case class ProcessedImage(
   /**
    * Save the processed image to a file.
    */
-  def saveToFile(path: Path): Either[Exception, Unit] =
+  def saveToFile(path: Path): Either[LLMError, Unit] =
     try {
       import java.nio.file.Files
-      Files.write(path, data)
+      
+      // Validate path for security (prevent path traversal)
+      val normalizedPath = path.normalize()
+      if (!normalizedPath.startsWith(path.getFileSystem.getPath(".").normalize())) {
+        return Left(LLMError.invalidImageInput("path", path.toString, "Path traversal detected"))
+      }
+      
+      Files.write(normalizedPath, data)
       Right(())
     } catch {
-      case e: Exception => Left(e)
+      case e: java.nio.file.AccessDeniedException =>
+        Left(LLMError.processingFailed("save", s"Access denied: ${e.getMessage}", Some(e)))
+      case e: java.nio.file.NoSuchFileException =>
+        Left(LLMError.processingFailed("save", s"Directory does not exist: ${e.getMessage}", Some(e)))
+      case e: java.nio.file.FileSystemException =>
+        Left(LLMError.processingFailed("save", s"File system error: ${e.getMessage}", Some(e)))
+      case e: Exception =>
+        Left(LLMError.processingFailed("save", s"Unexpected error: ${e.getMessage}", Some(e)))
     }
 
   /**

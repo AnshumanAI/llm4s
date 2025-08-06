@@ -208,13 +208,42 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
   }
 
   private def blurBufferedImage(image: BufferedImage, radius: Double): BufferedImage = {
-    val _ = radius // Acknowledge parameter for future blur implementation
-    // Simple box blur implementation
+    val kernelSize = math.max(3, (radius * 2 + 1).toInt)
+    val halfKernel = kernelSize / 2
+    
     val result = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
-    val g2d    = result.createGraphics()
-    g2d.drawImage(image, 0, 0, null)
-    g2d.dispose()
-    result // Placeholder - full blur implementation would be more complex
+    
+    // Apply box blur using convolution
+    for {
+      y <- 0 until image.getHeight
+      x <- 0 until image.getWidth
+    } {
+      var redSum = 0
+      var greenSum = 0
+      var blueSum = 0
+      var count = 0
+      
+      // Sample pixels in the kernel area
+      for {
+        ky <- math.max(0, y - halfKernel) to math.min(image.getHeight - 1, y + halfKernel)
+        kx <- math.max(0, x - halfKernel) to math.min(image.getWidth - 1, x + halfKernel)
+      } {
+        val rgb = image.getRGB(kx, ky)
+        redSum += (rgb >> 16) & 0xFF
+        greenSum += (rgb >> 8) & 0xFF
+        blueSum += rgb & 0xFF
+        count += 1
+      }
+      
+      // Calculate average color
+      val avgRed = redSum / count
+      val avgGreen = greenSum / count
+      val avgBlue = blueSum / count
+      
+      result.setRGB(x, y, (avgRed << 16) | (avgGreen << 8) | avgBlue)
+    }
+    
+    result
   }
 
   private def adjustBrightness(image: BufferedImage, level: Int): BufferedImage = {
