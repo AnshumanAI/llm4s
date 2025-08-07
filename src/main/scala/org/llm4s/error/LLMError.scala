@@ -165,8 +165,8 @@ object LLMError {
     reason: String
   ) extends LLMError {
     override val context: Map[String, String] = Map(
-      "field" -> field,
-      "value" -> value,
+      "field"  -> field,
+      "value"  -> value,
       "reason" -> reason
     )
   }
@@ -180,7 +180,7 @@ object LLMError {
     statusCode: Option[Int] = None,
     responseBody: Option[String] = None
   ) extends LLMError {
-    override val isRecoverable: Boolean = statusCode.exists(_ >= 500)
+    override val isRecoverable: Boolean   = statusCode.exists(_ >= 500)
     override val retryDelay: Option[Long] = if (isRecoverable) Some(2000) else None
     override val context: Map[String, String] = Map("provider" -> provider) ++
       statusCode.map("statusCode" -> _.toString) ++
@@ -207,7 +207,12 @@ object LLMError {
   def invalidImageInput(field: String, value: String, reason: String): LLMError =
     InvalidInputError(s"Invalid image input for $field: $value", field, value, reason)
 
-  def apiCallFailed(provider: String, message: String, statusCode: Option[Int] = None, responseBody: Option[String] = None): LLMError =
+  def apiCallFailed(
+    provider: String,
+    message: String,
+    statusCode: Option[Int] = None,
+    responseBody: Option[String] = None
+  ): LLMError =
     APIError(s"API call to $provider failed: $message", provider, statusCode, responseBody)
 
   def fromThrowable(throwable: Throwable): LLMError = throwable match {

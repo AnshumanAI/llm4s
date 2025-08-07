@@ -31,7 +31,9 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
       val base64Image = encodeImageToBase64(imagePath) match {
         case Success(encoded) => encoded
         case Failure(exception) =>
-          return Left(LLMError.processingFailed("encode", s"Failed to encode image: ${exception.getMessage}", Some(exception)))
+          return Left(
+            LLMError.processingFailed("encode", s"Failed to encode image: ${exception.getMessage}", Some(exception))
+          )
       }
 
       // Call Anthropic Vision API
@@ -55,7 +57,9 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
 
     } catch {
       case e: Exception =>
-        Left(LLMError.processingFailed("analyze", s"Error analyzing image with Anthropic Vision: ${e.getMessage}", Some(e)))
+        Left(
+          LLMError.processingFailed("analyze", s"Error analyzing image with Anthropic Vision: ${e.getMessage}", Some(e))
+        )
     }
 
   override def preprocessImage(
@@ -131,23 +135,28 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
     val extension = imagePath.toLowerCase.split('.').lastOption.getOrElse("")
     extension match {
       case "jpg" | "jpeg" => "image/jpeg"
-      case "png" => "image/png"
-      case "gif" => "image/gif"
-      case "webp" => "image/webp"
-      case "bmp" => "image/bmp"
+      case "png"          => "image/png"
+      case "gif"          => "image/gif"
+      case "webp"         => "image/webp"
+      case "bmp"          => "image/bmp"
       case "tiff" | "tif" => "image/tiff"
-      case _ => "image/jpeg" // Default fallback
+      case _              => "image/jpeg" // Default fallback
     }
   }
 
-  private def callAnthropicVisionAPI(base64Image: String, prompt: String, mediaType: String = "image/jpeg"): Try[String] =
+  private def callAnthropicVisionAPI(
+    base64Image: String,
+    prompt: String,
+    mediaType: String = "image/jpeg"
+  ): Try[String] =
     Try {
       // This is a simplified implementation
       // In a real implementation, you would use an HTTP client to call the Anthropic API
       import java.net.URI
       import java.net.http.{ HttpClient, HttpRequest, HttpResponse }
 
-      val client = HttpClient.newBuilder()
+      val client = HttpClient
+        .newBuilder()
         .connectTimeout(java.time.Duration.ofSeconds(30))
         .build()
 
