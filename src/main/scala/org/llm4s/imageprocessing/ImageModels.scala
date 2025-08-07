@@ -99,15 +99,17 @@ case class ProcessedImage(
   def saveToFile(path: Path): Either[LLMError, Unit] =
     try {
       import java.nio.file.Files
-      
+
       // Validate path for security (prevent path traversal)
       val normalizedPath = path.normalize()
-      val currentDir = path.getFileSystem.getPath(".").normalize()
-      if (normalizedPath.startsWith(currentDir.resolve("..")) || 
-          normalizedPath.startsWith(currentDir.resolve("../"))) {
+      val currentDir     = path.getFileSystem.getPath(".").normalize()
+      if (
+        normalizedPath.startsWith(currentDir.resolve("..")) ||
+        normalizedPath.startsWith(currentDir.resolve("../"))
+      ) {
         return Left(LLMError.invalidImageInput("path", path.toString, "Path traversal detected"))
       }
-      
+
       Files.write(normalizedPath, data)
       Right(())
     } catch {

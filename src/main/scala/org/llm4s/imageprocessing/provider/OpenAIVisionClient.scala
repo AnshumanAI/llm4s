@@ -50,7 +50,8 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
       Right(parsedResult)
 
     } catch {
-      case e: Exception => Left(LLMError.processingFailed("process", s"Error analyzing image with OpenAI Vision: ${e.getMessage}"))
+      case e: Exception =>
+        Left(LLMError.processingFailed("process", s"Error analyzing image with OpenAI Vision: ${e.getMessage}"))
     }
 
   override def preprocessImage(

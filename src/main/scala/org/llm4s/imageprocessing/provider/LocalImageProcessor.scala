@@ -42,7 +42,8 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.processingFailed("analyze", s"Error analyzing image: ${e.getMessage}", Some(e)))
+      case e: Exception =>
+        Left(LLMError.processingFailed("analyze", s"Error analyzing image: ${e.getMessage}", Some(e)))
     }
 
   override def preprocessImage(
@@ -75,7 +76,8 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.processingFailed("process", s"Error processing image: ${e.getMessage}", Some(e)))
+      case e: Exception =>
+        Left(LLMError.processingFailed("process", s"Error processing image: ${e.getMessage}", Some(e)))
     }
 
   override def convertFormat(
@@ -105,7 +107,8 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.processingFailed("convert", s"Error converting image format: ${e.getMessage}", Some(e)))
+      case e: Exception =>
+        Left(LLMError.processingFailed("convert", s"Error converting image format: ${e.getMessage}", Some(e)))
     }
 
   override def resizeImage(
@@ -210,39 +213,39 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
   private def blurBufferedImage(image: BufferedImage, radius: Double): BufferedImage = {
     val kernelSize = math.max(3, (radius * 2 + 1).toInt)
     val halfKernel = kernelSize / 2
-    
+
     val result = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
-    
+
     // Apply box blur using convolution
     for {
       y <- 0 until image.getHeight
       x <- 0 until image.getWidth
     } {
-      var redSum = 0
+      var redSum   = 0
       var greenSum = 0
-      var blueSum = 0
-      var count = 0
-      
+      var blueSum  = 0
+      var count    = 0
+
       // Sample pixels in the kernel area
       for {
         ky <- math.max(0, y - halfKernel) to math.min(image.getHeight - 1, y + halfKernel)
         kx <- math.max(0, x - halfKernel) to math.min(image.getWidth - 1, x + halfKernel)
       } {
         val rgb = image.getRGB(kx, ky)
-        redSum += (rgb >> 16) & 0xFF
-        greenSum += (rgb >> 8) & 0xFF
-        blueSum += rgb & 0xFF
+        redSum += (rgb >> 16) & 0xff
+        greenSum += (rgb >> 8) & 0xff
+        blueSum += rgb & 0xff
         count += 1
       }
-      
+
       // Calculate average color
-      val avgRed = redSum / count
+      val avgRed   = redSum / count
       val avgGreen = greenSum / count
-      val avgBlue = blueSum / count
-      
+      val avgBlue  = blueSum / count
+
       result.setRGB(x, y, (avgRed << 16) | (avgGreen << 8) | avgBlue)
     }
-    
+
     result
   }
 

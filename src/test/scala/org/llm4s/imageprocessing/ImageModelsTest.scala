@@ -2,7 +2,7 @@ package org.llm4s.imageprocessing
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 import java.time.Instant
 import org.llm4s.error.LLMError
 
@@ -44,8 +44,8 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
   }
 
   "ProcessedImage" should "create with valid data" in {
-    val data = Array[Byte](1, 2, 3, 4)
-    val metadata = ImageMetadata()
+    val data           = Array[Byte](1, 2, 3, 4)
+    val metadata       = ImageMetadata()
     val processedImage = ProcessedImage(data, ImageFormat.JPEG, 100, 100, metadata)
 
     processedImage.data shouldBe data
@@ -59,22 +59,21 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
   it should "save to file successfully" in {
     val tempFile = Files.createTempFile("test", ".jpg")
     try {
-      val data = Array[Byte](1, 2, 3, 4)
-      val metadata = ImageMetadata()
+      val data           = Array[Byte](1, 2, 3, 4)
+      val metadata       = ImageMetadata()
       val processedImage = ProcessedImage(data, ImageFormat.JPEG, 100, 100, metadata)
 
       val result = processedImage.saveToFile(tempFile)
       result shouldBe Right(())
       Files.exists(tempFile) shouldBe true
       Files.readAllBytes(tempFile) shouldBe data
-    } finally {
+    } finally
       Files.deleteIfExists(tempFile)
-    }
   }
 
   it should "fail to save with invalid path" in {
-    val data = Array[Byte](1, 2, 3, 4)
-    val metadata = ImageMetadata()
+    val data           = Array[Byte](1, 2, 3, 4)
+    val metadata       = ImageMetadata()
     val processedImage = ProcessedImage(data, ImageFormat.JPEG, 100, 100, metadata)
 
     val result = processedImage.saveToFile(Paths.get("/invalid/path/that/does/not/exist/file.jpg"))
@@ -82,20 +81,20 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
   }
 
   it should "prevent path traversal attacks" in {
-    val data = Array[Byte](1, 2, 3, 4)
-    val metadata = ImageMetadata()
+    val data           = Array[Byte](1, 2, 3, 4)
+    val metadata       = ImageMetadata()
     val processedImage = ProcessedImage(data, ImageFormat.JPEG, 100, 100, metadata)
 
     val maliciousPath = Paths.get("../../../etc/passwd")
-    val result = processedImage.saveToFile(maliciousPath)
+    val result        = processedImage.saveToFile(maliciousPath)
     result.isLeft shouldBe true
   }
 
   "ImageAnalysisResult" should "create with all fields" in {
     val metadata = ImageMetadata()
-    val objects = List(DetectedObject("person", 0.9, BoundingBox(10, 10, 50, 100)))
+    val objects  = List(DetectedObject("person", 0.9, BoundingBox(10, 10, 50, 100)))
     val emotions = List(DetectedEmotion("happy", 0.8))
-    
+
     val result = ImageAnalysisResult(
       description = "A person in the image",
       confidence = 0.85,
@@ -117,7 +116,7 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
 
   "DetectedObject" should "create with bounding box" in {
     val obj = DetectedObject("car", 0.95, BoundingBox(100, 200, 300, 150))
-    
+
     obj.label shouldBe "car"
     obj.confidence shouldBe 0.95
     obj.boundingBox.x shouldBe 100
@@ -128,14 +127,14 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
 
   "DetectedEmotion" should "create with emotion and confidence" in {
     val emotion = DetectedEmotion("sad", 0.7)
-    
+
     emotion.emotion shouldBe "sad"
     emotion.confidence shouldBe 0.7
   }
 
   "BoundingBox" should "create with coordinates" in {
     val box = BoundingBox(10, 20, 100, 200)
-    
+
     box.x shouldBe 10
     box.y shouldBe 20
     box.width shouldBe 100
@@ -146,14 +145,14 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
     val vector1 = Array[Float](1.0f, 0.0f, 0.0f)
     val vector2 = Array[Float](1.0f, 0.0f, 0.0f)
     val vector3 = Array[Float](0.0f, 1.0f, 0.0f)
-    
+
     val embedding1 = ImageEmbedding(vector1, 3, "test-model", "/path1", ImageMetadata())
     val embedding2 = ImageEmbedding(vector2, 3, "test-model", "/path2", ImageMetadata())
     val embedding3 = ImageEmbedding(vector3, 3, "test-model", "/path3", ImageMetadata())
-    
+
     // Same vectors should have similarity of 1.0
     embedding1.cosineSimilarity(embedding2) shouldBe 1.0 +- 0.001
-    
+
     // Orthogonal vectors should have similarity of 0.0
     embedding1.cosineSimilarity(embedding3) shouldBe 0.0 +- 0.001
   }
@@ -161,10 +160,10 @@ class ImageModelsTest extends AnyFlatSpec with Matchers {
   it should "throw exception for different dimensions" in {
     val vector1 = Array[Float](1.0f, 0.0f)
     val vector2 = Array[Float](1.0f, 0.0f, 0.0f)
-    
+
     val embedding1 = ImageEmbedding(vector1, 2, "test-model", "/path1", ImageMetadata())
     val embedding2 = ImageEmbedding(vector2, 3, "test-model", "/path2", ImageMetadata())
-    
+
     an[IllegalArgumentException] should be thrownBy {
       embedding1.cosineSimilarity(embedding2)
     }
