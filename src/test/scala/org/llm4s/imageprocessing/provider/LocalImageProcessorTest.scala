@@ -3,12 +3,10 @@ package org.llm4s.imageprocessing.provider
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.llm4s.imageprocessing._
-import org.llm4s.error.LLMError
 import java.nio.file.{ Files, Paths }
 import java.awt.image.BufferedImage
 import java.awt.Color
 import javax.imageio.ImageIO
-import java.io.ByteArrayOutputStream
 
 class LocalImageProcessorTest extends AnyFlatSpec with Matchers {
 

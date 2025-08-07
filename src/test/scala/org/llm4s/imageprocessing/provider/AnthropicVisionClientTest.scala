@@ -5,8 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.BeforeAndAfterEach
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.AnthropicVisionConfig
-import org.llm4s.error.LLMError
-import java.nio.file.{ Files, Paths }
+import java.nio.file.Files
 import java.awt.image.BufferedImage
 import java.awt.Color
 import javax.imageio.ImageIO
