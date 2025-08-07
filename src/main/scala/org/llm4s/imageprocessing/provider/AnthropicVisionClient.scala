@@ -2,7 +2,7 @@ package org.llm4s.imageprocessing.provider
 
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.AnthropicVisionConfig
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 import java.time.Instant
 import java.util.Base64
 import java.nio.file.{ Files, Paths }
@@ -29,7 +29,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
       val base64Image = encodeImageToBase64(imagePath) match {
         case Success(encoded) => encoded
         case Failure(exception) =>
-          return Left(LLMError.ProcessingError(s"Failed to encode image: ${exception.getMessage}"))
+          return Left(LLMError.processingFailed("encode", s"Failed to encode image: ${exception.getMessage}", Some(exception)))
       }
 
       // Call Anthropic Vision API
@@ -38,10 +38,13 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
           "Provide tags that categorize the image content."
       )
 
-      val visionResponse = callAnthropicVisionAPI(base64Image, analysisPrompt) match {
+      // Detect media type for proper API call
+      val mediaType = detectMediaType(imagePath)
+
+      val visionResponse = callAnthropicVisionAPI(base64Image, analysisPrompt, mediaType) match {
         case Success(response) => response
         case Failure(exception) =>
-          return Left(LLMError.APIError(s"Anthropic Vision API call failed: ${exception.getMessage}"))
+          return Left(LLMError.apiCallFailed("Anthropic", s"Anthropic Vision API call failed: ${exception.getMessage}"))
       }
 
       // Parse the response and extract structured information
@@ -50,7 +53,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
 
     } catch {
       case e: Exception =>
-        Left(LLMError.ProcessingError(s"Error analyzing image with Anthropic Vision: ${e.getMessage}"))
+        Left(LLMError.processingFailed("analyze", s"Error analyzing image with Anthropic Vision: ${e.getMessage}", Some(e)))
     }
 
   override def preprocessImage(
@@ -116,20 +119,35 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
 
   // Private helper methods
 
-  private def encodeImageToBase64(imagePath: String): Try[String] =
+  def encodeImageToBase64(imagePath: String): Try[String] =
     Try {
       val imageBytes = Files.readAllBytes(Paths.get(imagePath))
       Base64.getEncoder.encodeToString(imageBytes)
     }
 
-  private def callAnthropicVisionAPI(base64Image: String, prompt: String): Try[String] =
+  def detectMediaType(imagePath: String): String = {
+    val extension = imagePath.toLowerCase.split('.').lastOption.getOrElse("")
+    extension match {
+      case "jpg" | "jpeg" => "image/jpeg"
+      case "png" => "image/png"
+      case "gif" => "image/gif"
+      case "webp" => "image/webp"
+      case "bmp" => "image/bmp"
+      case "tiff" | "tif" => "image/tiff"
+      case _ => "image/jpeg" // Default fallback
+    }
+  }
+
+  private def callAnthropicVisionAPI(base64Image: String, prompt: String, mediaType: String = "image/jpeg"): Try[String] =
     Try {
       // This is a simplified implementation
       // In a real implementation, you would use an HTTP client to call the Anthropic API
       import java.net.http.{ HttpClient, HttpRequest, HttpResponse }
       import java.net.URI
 
-      val client = HttpClient.newHttpClient()
+      val client = HttpClient.newBuilder()
+        .connectTimeout(java.time.Duration.ofSeconds(30))
+        .build()
 
       val requestBody = s"""{
         "model": "${config.model}",
@@ -146,7 +164,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
                 "type": "image",
                 "source": {
                   "type": "base64",
-                  "media_type": "image/jpeg",
+                  "media_type": "$mediaType",
                   "data": "$base64Image"
                 }
               }
@@ -161,6 +179,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
         .header("Content-Type", "application/json")
         .header("x-api-key", config.apiKey)
         .header("anthropic-version", "2023-06-01")
+        .timeout(java.time.Duration.ofSeconds(60))
         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
         .build()
 

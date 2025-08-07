@@ -1,7 +1,7 @@
 package org.llm4s.imageprocessing.provider
 
 import org.llm4s.imageprocessing._
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 import java.awt.image.BufferedImage
 import java.awt.{ RenderingHints, Color }
 import java.io.{ ByteArrayOutputStream, File }
@@ -24,7 +24,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val bufferedImage = ImageIO.read(new File(imagePath))
       if (bufferedImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val metadata      = extractImageMetadata(imagePath, bufferedImage)
@@ -42,7 +42,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error analyzing image: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("analyze", s"Error analyzing image: ${e.getMessage}", Some(e)))
     }
 
   override def preprocessImage(
@@ -52,7 +52,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val originalImage = ImageIO.read(new File(imagePath))
       if (originalImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val processedImage = operations.foldLeft(originalImage)((img, operation) => applyOperation(img, operation))
@@ -75,7 +75,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error processing image: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("process", s"Error processing image: ${e.getMessage}", Some(e)))
     }
 
   override def convertFormat(
@@ -85,7 +85,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
     try {
       val originalImage = ImageIO.read(new File(imagePath))
       if (originalImage == null) {
-        return Left(LLMError.InvalidInput(s"Could not read image from path: $imagePath"))
+        return Left(LLMError.invalidImageInput("path", imagePath, "Could not read image from path"))
       }
 
       val imageData = convertToByteArray(originalImage, targetFormat)
@@ -105,7 +105,7 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
         )
       )
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error converting image format: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("convert", s"Error converting image format: ${e.getMessage}", Some(e)))
     }
 
   override def resizeImage(
@@ -208,13 +208,42 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
   }
 
   private def blurBufferedImage(image: BufferedImage, radius: Double): BufferedImage = {
-    val _ = radius // Acknowledge parameter for future blur implementation
-    // Simple box blur implementation
+    val kernelSize = math.max(3, (radius * 2 + 1).toInt)
+    val halfKernel = kernelSize / 2
+    
     val result = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
-    val g2d    = result.createGraphics()
-    g2d.drawImage(image, 0, 0, null)
-    g2d.dispose()
-    result // Placeholder - full blur implementation would be more complex
+    
+    // Apply box blur using convolution
+    for {
+      y <- 0 until image.getHeight
+      x <- 0 until image.getWidth
+    } {
+      var redSum = 0
+      var greenSum = 0
+      var blueSum = 0
+      var count = 0
+      
+      // Sample pixels in the kernel area
+      for {
+        ky <- math.max(0, y - halfKernel) to math.min(image.getHeight - 1, y + halfKernel)
+        kx <- math.max(0, x - halfKernel) to math.min(image.getWidth - 1, x + halfKernel)
+      } {
+        val rgb = image.getRGB(kx, ky)
+        redSum += (rgb >> 16) & 0xFF
+        greenSum += (rgb >> 8) & 0xFF
+        blueSum += rgb & 0xFF
+        count += 1
+      }
+      
+      // Calculate average color
+      val avgRed = redSum / count
+      val avgGreen = greenSum / count
+      val avgBlue = blueSum / count
+      
+      result.setRGB(x, y, (avgRed << 16) | (avgGreen << 8) | avgBlue)
+    }
+    
+    result
   }
 
   private def adjustBrightness(image: BufferedImage, level: Int): BufferedImage = {
