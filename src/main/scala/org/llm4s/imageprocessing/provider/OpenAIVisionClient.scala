@@ -2,7 +2,7 @@ package org.llm4s.imageprocessing.provider
 
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.OpenAIVisionConfig
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 import java.time.Instant
 import java.util.Base64
 import java.nio.file.{ Files, Paths }
@@ -30,7 +30,7 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
       val base64Image = encodeImageToBase64(imagePath) match {
         case Success(encoded) => encoded
         case Failure(exception) =>
-          return Left(LLMError.ProcessingError(s"Failed to encode image: ${exception.getMessage}"))
+          return Left(LLMError.processingFailed("process", s"Failed to encode image: ${exception.getMessage}"))
       }
 
       // Call OpenAI Vision API
@@ -42,7 +42,7 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
       val visionResponse = callOpenAIVisionAPI(base64Image, analysisPrompt) match {
         case Success(response) => response
         case Failure(exception) =>
-          return Left(LLMError.APIError(s"OpenAI Vision API call failed: ${exception.getMessage}"))
+          return Left(LLMError.apiCallFailed("OpenAI", s"OpenAI Vision API call failed: ${exception.getMessage}"))
       }
 
       // Parse the response and extract structured information
@@ -50,7 +50,7 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
       Right(parsedResult)
 
     } catch {
-      case e: Exception => Left(LLMError.ProcessingError(s"Error analyzing image with OpenAI Vision: ${e.getMessage}"))
+      case e: Exception => Left(LLMError.processingFailed("process", s"Error analyzing image with OpenAI Vision: ${e.getMessage}"))
     }
 
   override def preprocessImage(
@@ -116,7 +116,7 @@ class OpenAIVisionClient(config: OpenAIVisionConfig) extends org.llm4s.imageproc
 
   // Private helper methods
 
-  private def encodeImageToBase64(imagePath: String): Try[String] =
+  def encodeImageToBase64(imagePath: String): Try[String] =
     Try {
       val imageBytes = Files.readAllBytes(Paths.get(imagePath))
       Base64.getEncoder.encodeToString(imageBytes)
