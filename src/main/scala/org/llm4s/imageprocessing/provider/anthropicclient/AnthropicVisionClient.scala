@@ -147,7 +147,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
   private def callAnthropicVisionAPI(
     base64Image: String,
     prompt: String,
-    mediaType: String = "image/jpeg"
+    mediaType: String
   ): Try[String] =
     Try {
       // This is a simplified implementation

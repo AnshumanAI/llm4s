@@ -4,7 +4,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import java.nio.file.{ Files, Paths }
 import java.time.Instant
-import org.llm4s.error.LLMError
 
 class ImageModelsTest extends AnyFlatSpec with Matchers {
 
