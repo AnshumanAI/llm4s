@@ -3,7 +3,7 @@ package org.llm4s.imageprocessing.provider.anthropicclient
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.AnthropicVisionConfig
 import org.llm4s.imageprocessing.provider.LocalImageProcessor
-import org.llm4s.llmconnect.model.LLMError
+import org.llm4s.error.LLMError
 
 import java.nio.file.{ Files, Paths }
 import java.time.Instant
@@ -131,23 +131,13 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
       Base64.getEncoder.encodeToString(imageBytes)
     }
 
-  def detectMediaType(imagePath: String): String = {
-    val extension = imagePath.toLowerCase.split('.').lastOption.getOrElse("")
-    extension match {
-      case "jpg" | "jpeg" => "image/jpeg"
-      case "png"          => "image/png"
-      case "gif"          => "image/gif"
-      case "webp"         => "image/webp"
-      case "bmp"          => "image/bmp"
-      case "tiff" | "tif" => "image/tiff"
-      case _              => "image/jpeg" // Default fallback
-    }
-  }
+  def detectMediaType(imagePath: String): MediaType =
+    MediaType.fromPath(imagePath)
 
   private def callAnthropicVisionAPI(
     base64Image: String,
     prompt: String,
-    mediaType: String
+    mediaType: MediaType
   ): Try[String] =
     Try {
       // This is a simplified implementation
@@ -175,7 +165,7 @@ class AnthropicVisionClient(config: AnthropicVisionConfig) extends org.llm4s.ima
                 "type": "image",
                 "source": {
                   "type": "base64",
-                  "media_type": "$mediaType",
+                  "media_type": "${mediaType.value}",
                   "data": "$base64Image"
                 }
               }

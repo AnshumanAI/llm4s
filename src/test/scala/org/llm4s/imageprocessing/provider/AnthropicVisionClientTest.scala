@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.BeforeAndAfterEach
 import org.llm4s.imageprocessing._
 import org.llm4s.imageprocessing.config.AnthropicVisionConfig
+import org.llm4s.imageprocessing.provider.anthropicclient.AnthropicVisionClient
 import java.nio.file.Files
 import java.awt.image.BufferedImage
 import java.awt.Color
@@ -39,15 +40,15 @@ class AnthropicVisionClientTest extends AnyFlatSpec with Matchers with BeforeAnd
     val client = new AnthropicVisionClient(config)
 
     // Test different file extensions
-    client.detectMediaType("test.jpg") shouldBe "image/jpeg"
-    client.detectMediaType("test.jpeg") shouldBe "image/jpeg"
-    client.detectMediaType("test.png") shouldBe "image/png"
-    client.detectMediaType("test.gif") shouldBe "image/gif"
-    client.detectMediaType("test.webp") shouldBe "image/webp"
-    client.detectMediaType("test.bmp") shouldBe "image/bmp"
-    client.detectMediaType("test.tiff") shouldBe "image/tiff"
-    client.detectMediaType("test.tif") shouldBe "image/tiff"
-    client.detectMediaType("test.unknown") shouldBe "image/jpeg" // Default fallback
+    client.detectMediaType("test.jpg").value shouldBe "image/jpeg"
+    client.detectMediaType("test.jpeg").value shouldBe "image/jpeg"
+    client.detectMediaType("test.png").value shouldBe "image/png"
+    client.detectMediaType("test.gif").value shouldBe "image/gif"
+    client.detectMediaType("test.webp").value shouldBe "image/webp"
+    client.detectMediaType("test.bmp").value shouldBe "image/bmp"
+    client.detectMediaType("test.tiff").value shouldBe "image/tiff"
+    client.detectMediaType("test.tif").value shouldBe "image/tiff"
+    client.detectMediaType("test.unknown").value shouldBe "image/jpeg" // Default fallback
   }
 
   it should "encode image to base64 successfully" in {
@@ -120,8 +121,7 @@ class AnthropicVisionClientTest extends AnyFlatSpec with Matchers with BeforeAnd
   it should "delegate preprocessing to local processor" in {
     val client = new AnthropicVisionClient(config)
 
-    val operations = List(ImageOperation.Resize(50, 50))
-    val result     = client.preprocessImage(tempFile.toString, operations)
+    val result = client.preprocessImage(tempFile.toString, List(ImageOperation.Resize(50, 50)))
 
     result.isRight shouldBe true
     result.foreach { processedImage =>
@@ -191,8 +191,8 @@ class AnthropicVisionClientTest extends AnyFlatSpec with Matchers with BeforeAnd
       ImageIO.write(testImage, "jpg", jpgFile.toFile)
 
       // The media type detection should work correctly
-      client.detectMediaType(pngFile.toString) shouldBe "image/png"
-      client.detectMediaType(jpgFile.toString) shouldBe "image/jpeg"
+      client.detectMediaType(pngFile.toString).value shouldBe "image/png"
+      client.detectMediaType(jpgFile.toString).value shouldBe "image/jpeg"
     } finally {
       Files.deleteIfExists(pngFile)
       Files.deleteIfExists(jpgFile)

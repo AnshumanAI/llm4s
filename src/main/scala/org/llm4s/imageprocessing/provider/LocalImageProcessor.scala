@@ -221,21 +221,14 @@ class LocalImageProcessor extends org.llm4s.imageprocessing.ImageProcessingClien
       y <- 0 until image.getHeight
       x <- 0 until image.getWidth
     } {
-      var redSum   = 0
-      var greenSum = 0
-      var blueSum  = 0
-      var count    = 0
-
-      // Sample pixels in the kernel area
-      for {
+      // Sample pixels in the kernel area using foldLeft for immutability
+      val kernelPixels = for {
         ky <- math.max(0, y - halfKernel) to math.min(image.getHeight - 1, y + halfKernel)
         kx <- math.max(0, x - halfKernel) to math.min(image.getWidth - 1, x + halfKernel)
-      } {
-        val rgb = image.getRGB(kx, ky)
-        redSum += (rgb >> 16) & 0xff
-        greenSum += (rgb >> 8) & 0xff
-        blueSum += rgb & 0xff
-        count += 1
+      } yield image.getRGB(kx, ky)
+
+      val (redSum, greenSum, blueSum, count) = kernelPixels.foldLeft((0, 0, 0, 0)) { case ((r, g, b, c), rgb) =>
+        (r + ((rgb >> 16) & 0xff), g + ((rgb >> 8) & 0xff), b + (rgb & 0xff), c + 1)
       }
 
       // Calculate average color
