@@ -10,8 +10,16 @@ object EnvLoader {
     .load()
 
   logger.info(s"Environment variables loaded from .env file ${EnvLoader.dotenv}")
-  def get(key: String): Option[String] =
-    Option(dotenv.get(key))
+  def get(key: String): Option[String] = {
+    // First check system environment variables
+    val systemEnv = sys.env.get(key)
+    if (systemEnv.isDefined) {
+      systemEnv
+    } else {
+      // Fall back to .env file
+      Option(dotenv.get(key))
+    }
+  }
 
   def getOrElse(key: String, default: String): String =
     get(key).getOrElse(default)
