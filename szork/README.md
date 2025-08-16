@@ -74,6 +74,38 @@ cd szork
 sbt run
 ```
 
+### LLM Provider Options
+
+Szork supports multiple LLM providers through LLM4S:
+
+#### OpenAI
+```bash
+export LLM_MODEL=openai/gpt-4o
+export OPENAI_API_KEY=your_openai_api_key
+sbt run
+```
+
+#### Anthropic
+```bash
+export LLM_MODEL=anthropic/claude-3-5-sonnet-20241022
+export ANTHROPIC_API_KEY=your_anthropic_api_key
+sbt run
+```
+
+#### OpenRouter (Multiple Models)
+```bash
+# Quick setup with our script
+./run-with-openrouter.sh your_openrouter_api_key
+
+# Or manual setup
+export LLM_MODEL=openai/gpt-4o
+export OPENAI_API_KEY=your_openrouter_api_key
+export OPENAI_BASE_URL=https://openrouter.ai/api/v1
+sbt run
+```
+
+For detailed OpenRouter setup instructions, see [README_OPENROUTER.md](README_OPENROUTER.md).
+
 ### Maintainers
 
 Want to connect with maintainers? The Szork project is maintained by:
