@@ -123,6 +123,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "llm4s",
     commonSettings,
+    resolvers += "Sphinx4 Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
     libraryDependencies ++= List(
       "com.azure"          % "azure-ai-openai" % "1.0.0-beta.16",
       "com.anthropic"      % "anthropic-java"  % "2.2.0",
@@ -138,7 +139,10 @@ lazy val root = (project in file("."))
       "org.apache.poi" % "poi-ooxml" % "5.4.1",
       "com.lihaoyi" %% "requests" % "0.9.0",
       "org.jsoup" % "jsoup" % "1.21.1",
-      "io.github.cdimascio" % "dotenv-java" % "3.0.0"
+      "io.github.cdimascio" % "dotenv-java" % "3.0.0",
+      // Speech: Sphinx4 for lightweight STT
+      "edu.cmu.sphinx" % "sphinx4-core" % "5prealpha-SNAPSHOT",
+      "edu.cmu.sphinx" % "sphinx4-data" % "5prealpha-SNAPSHOT"
     )
 
   )
