@@ -4,6 +4,7 @@ import org.llm4s.error.ConfigurationError
 import org.llm4s.llmconnect.model.StreamedChunk
 import org.llm4s.toolapi.ToolFunction
 import org.llm4s.types.{ AsyncResult, Result }
+import upickle.default.{ ReadWriter => RW, readwriter }
 
 import java.time.Instant
 import scala.concurrent.Future
@@ -142,6 +143,11 @@ package object types {
    */
   final case class SessionId(value: String) extends AnyVal {
     override def toString: String = value
+  }
+
+  object SessionId {
+    implicit val rw: RW[SessionId] =
+      readwriter[String].bimap[SessionId](_.value, SessionId.apply)
   }
 
   /**
@@ -384,9 +390,19 @@ package object types {
     }
   }
 
+  object FilePath {
+    implicit val rw: RW[FilePath] =
+      readwriter[String].bimap[FilePath](_.value, FilePath.apply)
+  }
+
   /** Type-safe wrapper for directory paths */
   final case class DirectoryPath(value: String) extends AnyVal {
     override def toString: String = value
+  }
+
+  object DirectoryPath {
+    implicit val rw: RW[DirectoryPath] =
+      readwriter[String].bimap[DirectoryPath](_.value, DirectoryPath.apply)
   }
 
   /** Type alias for file content */

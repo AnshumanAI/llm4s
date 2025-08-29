@@ -110,10 +110,13 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= List(
     "org.typelevel" %% "cats-core"       % "2.13.0",
     "com.lihaoyi"   %% "upickle"         % "4.2.1",
+    "com.lihaoyi"   %% "fansi"           % "0.5.0",
     "ch.qos.logback" % "logback-classic" % "1.5.18",
     "dev.optics" %% "monocle-core"  % "3.3.0",
     "dev.optics" %% "monocle-macro" % "3.3.0",
-    "org.scalatest" %% "scalatest"       % "3.2.19" % Test
+    "org.scalatest" %% "scalatest"       % "3.2.19" % Test,
+    "commons-io"     % "commons-io"      % "2.18.0",
+    "com.lihaoyi"   %% "fansi"           % "0.5.0"
   )
 )
 
@@ -135,6 +138,7 @@ lazy val root = (project in file("."))
       "com.softwaremill.sttp.client4" %% "core"  % "4.0.9",
       "com.lihaoyi"                   %% "ujson" % "4.2.1",
       "org.apache.pdfbox" % "pdfbox" % "3.0.5",
+      "commons-io"        % "commons-io"      % "2.18.0",
       "org.apache.tika" % "tika-core" % "3.2.1",
       "org.apache.poi" % "poi-ooxml" % "5.4.1",
       "com.lihaoyi" %% "requests" % "0.9.0",
