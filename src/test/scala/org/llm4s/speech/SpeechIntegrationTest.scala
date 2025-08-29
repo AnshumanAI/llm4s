@@ -2,7 +2,7 @@ package org.llm4s.speech
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import org.llm4s.speech.stt.{ Sphinx4SpeechToText, WhisperSpeechToText, STTOptions, Sphinx4Config }
+import org.llm4s.speech.stt.{ VoskSpeechToText, WhisperSpeechToText, STTOptions }
 import org.llm4s.speech.tts.{ Tacotron2TextToSpeech, TTSOptions }
 import org.llm4s.speech.processing.AudioPreprocessing
 import org.llm4s.speech.io.AudioIO
@@ -49,22 +49,9 @@ class SpeechIntegrationTest extends AnyFunSuite with Matchers {
     }
   }
 
-  test("Sphinx4SpeechToText should handle configuration") {
-    val config = Sphinx4Config(
-      acousticModelPath = "/tmp/test-acoustic",
-      languageModelPath = "/tmp/test-language",
-      dictionaryPath = "/tmp/test-dict"
-    )
-
-    config.validate shouldBe false // Paths don't exist
-
-    val stt = new Sphinx4SpeechToText(
-      acousticModelPath = Some(config.acousticModelPath),
-      languageModelPath = Some(config.languageModelPath),
-      dictionaryPath = Some(config.dictionaryPath)
-    )
-
-    stt.name shouldBe "sphinx4"
+  test("VoskSpeechToText should handle configuration") {
+    val stt = new VoskSpeechToText(modelPath = Some("/tmp/test-model"))
+    stt.name shouldBe "vosk"
   }
 
   test("WhisperSpeechToText should build correct CLI arguments") {
@@ -118,11 +105,12 @@ class SpeechIntegrationTest extends AnyFunSuite with Matchers {
     Files.deleteIfExists(rawPath)
   }
 
-  test("Sphinx4Config should handle environment variables") {
-    // Test that fromEnv returns None when env vars aren't set
-    Sphinx4Config.fromEnv shouldBe None
-
-    // Test defaultEnglish returns None when models aren't found
-    Sphinx4Config.defaultEnglish shouldBe None
+  test("AudioConverter should compose operations") {
+    import org.llm4s.speech.processing.AudioConverter
+    
+    val converter = AudioConverter.sttPreprocessor(targetRate = 16000)
+    converter.name should include("mono-converter")
+    converter.name should include("resample-converter-16000Hz")
+    converter.name should include("silence-trimmer-512")
   }
 }

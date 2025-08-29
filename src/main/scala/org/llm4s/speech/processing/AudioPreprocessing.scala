@@ -55,23 +55,20 @@ object AudioPreprocessing {
         val numFrames     = bytes.length / frameSize
         val monoFrameSize = meta.bitDepth / 8
         val out           = new Array[Byte](numFrames * monoFrameSize)
-        var frameIndex    = 0
-        var outByteIndex  = 0
-        while (frameIndex < numFrames) {
-          var sum: Int = 0
-          var ch       = 0
-          while (ch < meta.numChannels) {
-            val base   = frameIndex * frameSize + ch * (meta.bitDepth / 8)
+        
+        (0 until numFrames).foreach { frameIndex =>
+          val sum = (0 until meta.numChannels).foldLeft(0) { (acc, ch) =>
+            val base = frameIndex * frameSize + ch * (meta.bitDepth / 8)
             val sample = ((bytes(base + 1) << 8) | (bytes(base) & 0xff)).toShort.toInt
-            sum += sample
-            ch += 1
+            acc + sample
           }
+          
           val avg: Short = (sum / meta.numChannels).toShort
+          val outByteIndex = frameIndex * 2
           out(outByteIndex) = (avg & 0xff).toByte
           out(outByteIndex + 1) = ((avg >> 8) & 0xff).toByte
-          outByteIndex += 2
-          frameIndex += 1
         }
+        
         Right(out -> meta.copy(numChannels = 1))
       } catch {
         case e: Exception => Left(OperationFailed(Option(e.getMessage).getOrElse("Mono mix failed")))
@@ -84,16 +81,13 @@ object AudioPreprocessing {
       val frameSize  = sampleSize * meta.numChannels
       val numFrames  = bytes.length / frameSize
       def frameLoud(frameIdx: Int): Boolean = {
-        var ch = 0
-        var m  = 0
-        while (ch < meta.numChannels) {
-          val base   = frameIdx * frameSize + ch * sampleSize
+        val maxAmplitude = (0 until meta.numChannels).foldLeft(0) { (max, ch) =>
+          val base = frameIdx * frameSize + ch * sampleSize
           val sample = ((bytes(base + 1) << 8) | (bytes(base) & 0xff)).toShort
-          val a      = math.abs(sample.toInt)
-          if (a > m) m = a
-          ch += 1
+          val amplitude = math.abs(sample.toInt)
+          math.max(max, amplitude)
         }
-        m >= threshold
+        maxAmplitude >= threshold
       }
       var start = 0
       while (start < numFrames && !frameLoud(start)) start += 1
@@ -123,3 +117,4 @@ object AudioPreprocessing {
   def wrap(bytes: Array[Byte], meta: AudioMeta, format: AudioFormat = AudioFormat.WavPcm16): GeneratedAudio =
     GeneratedAudio(bytes, meta, format)
 }
+nire 

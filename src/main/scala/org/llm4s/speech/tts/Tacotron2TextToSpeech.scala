@@ -3,6 +3,7 @@ package org.llm4s.speech.tts
 import org.llm4s.error.LLMError
 import org.llm4s.types.Result
 import org.llm4s.speech.{ GeneratedAudio, AudioMeta }
+import cats.implicits._
 
 import java.nio.file.Files
 import scala.sys.process._
@@ -19,17 +20,17 @@ final class Tacotron2TextToSpeech(
   override def synthesize(text: String, options: TTSOptions): Result[GeneratedAudio] =
     try {
       val tmpOut = Files.createTempFile("llm4s-tts-", ".wav")
-      val args =
-        command ++ Seq(
-          "--text",
-          text,
-          "--out",
-          tmpOut.toString
-        ) ++ options.voice.map(v => Seq("--voice", v)).getOrElse(Seq.empty) ++
-          options.language.map(l => Seq("--lang", l)).getOrElse(Seq.empty) ++
-          options.speakingRate.map(r => Seq("--rate", r.toString)).getOrElse(Seq.empty) ++
-          options.pitchSemitones.map(p => Seq("--pitch", p.toString)).getOrElse(Seq.empty) ++
-          options.volumeGainDb.map(v => Seq("--gain", v.toString)).getOrElse(Seq.empty)
+      val baseCommand = command ++ Seq("--text", text, "--out", tmpOut.toString)
+      
+      val optFlags = List(
+        options.voice.map(v => Seq("--voice", v)),
+        options.language.map(l => Seq("--lang", l)),
+        options.speakingRate.map(r => Seq("--rate", r.toString)),
+        options.pitchSemitones.map(p => Seq("--pitch", p.toString)),
+        options.volumeGainDb.map(v => Seq("--gain", v.toString))
+      ).flatten
+      
+      val args = baseCommand ++ optFlags.combineAll
 
       val _ = args.!
 

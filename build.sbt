@@ -123,7 +123,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "llm4s",
     commonSettings,
-    resolvers += "Sphinx4 Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+    resolvers += "Vosk Repository" at "https://alphacephei.com/maven/",
     libraryDependencies ++= List(
       "com.azure"          % "azure-ai-openai" % "1.0.0-beta.16",
       "com.anthropic"      % "anthropic-java"  % "2.2.0",
@@ -140,9 +140,9 @@ lazy val root = (project in file("."))
       "com.lihaoyi" %% "requests" % "0.9.0",
       "org.jsoup" % "jsoup" % "1.21.1",
       "io.github.cdimascio" % "dotenv-java" % "3.0.0",
-      // Speech: Sphinx4 for lightweight STT
-      "edu.cmu.sphinx" % "sphinx4-core" % "5prealpha-SNAPSHOT",
-      "edu.cmu.sphinx" % "sphinx4-data" % "5prealpha-SNAPSHOT"
+          // Speech: Vosk for lightweight STT (replacing abandoned Sphinx4)
+    "net.java.dev.jna" % "jna" % "5.13.0",
+    "com.alphacephei" % "vosk" % "0.3.45"
     )
 
   )

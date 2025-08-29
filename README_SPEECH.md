@@ -5,7 +5,7 @@ A comprehensive speech recognition and text-to-speech synthesis module for the L
 ## 🎯 Features
 
 ### Speech Recognition (STT)
-- **CMU Sphinx4**: Lightweight, offline speech recognition engine
+- **Vosk**: Lightweight, offline speech recognition engine (replaces Sphinx4)
 - **Whisper**: High-accuracy transcription via CLI integration
 - **Audio Preprocessing**: Resampling, channel conversion, silence trimming
 - **Multiple Input Formats**: File, bytes, and stream audio support
@@ -31,9 +31,8 @@ src/main/scala/org/llm4s/speech/
 ├── Audio.scala                    # Core audio data structures
 ├── stt/                          # Speech-to-Text implementations
 │   ├── SpeechToText.scala        # STT trait interface
-│   ├── Sphinx4SpeechToText.scala # CMU Sphinx4 integration
-│   ├── WhisperSpeechToText.scala # Whisper CLI integration
-│   └── Sphinx4Config.scala       # Sphinx4 configuration
+│   ├── VoskSpeechToText.scala    # Vosk integration (replaces Sphinx4)
+│   └── WhisperSpeechToText.scala # Whisper CLI integration
 ├── tts/                          # Text-to-Speech implementations
 │   ├── TextToSpeech.scala        # TTS trait interface
 │   └── Tacotron2TextToSpeech.scala # Tacotron2 CLI integration
@@ -89,15 +88,16 @@ val processed = AudioPreprocessing.standardizeForSTT(
 
 ## 🔧 Configuration
 
-### Sphinx4 Configuration
+### Vosk Configuration
 
 ```scala
-import org.llm4s.speech.stt.Sphinx4Config
+import org.llm4s.speech.stt.VoskSpeechToText
 
-// From environment variables
-val config = Sphinx4Config.fromEnv
+// Use default English model
+val stt = new VoskSpeechToText()
 
-// Manual configuration
+// Use custom model path
+val stt = new VoskSpeechToText(modelPath = Some("/path/to/vosk-model"))
 val config = Sphinx4Config(
   acousticModelPath = "/path/to/acoustic/model",
   languageModelPath = "/path/to/language/model",
@@ -114,10 +114,8 @@ val stt = new Sphinx4SpeechToText(
 ### Environment Variables
 
 ```bash
-# Sphinx4 Model Paths
-SPHINX4_ACOUSTIC_MODEL_PATH=/path/to/acoustic
-SPHINX4_LANGUAGE_MODEL_PATH=/path/to/language
-SPHINX4_DICTIONARY_PATH=/path/to/dictionary
+# Vosk Model Path (optional)
+VOSK_MODEL_PATH=/path/to/vosk-model
 ```
 
 ## 🧪 Testing
@@ -153,9 +151,9 @@ The `PlatformCommands` utility automatically provides the right commands:
 ## 📦 Dependencies
 
 ```scala
-// Sphinx4 for lightweight STT
-"edu.cmu.sphinx" % "sphinx4-core" % "5prealpha-SNAPSHOT"
-"edu.cmu.sphinx" % "sphinx4-data" % "5prealpha-SNAPSHOT"
+// Vosk for lightweight STT (replaces Sphinx4)
+"net.java.dev.jna" % "jna" % "5.13.0"
+"com.alphacephei" % "vosk" % "0.3.45"
 
 // Core dependencies
 "org.typelevel" %% "cats-core" % "2.9.0"
@@ -214,3 +212,5 @@ result match {
 ## 📄 License
 
 Part of the LLM4S project - see main project license for details.
+
+

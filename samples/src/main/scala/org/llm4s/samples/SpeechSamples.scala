@@ -1,7 +1,7 @@
 package org.llm4s.samples
 
 import org.llm4s.speech.AudioInput
-import org.llm4s.speech.stt.{ Sphinx4SpeechToText, WhisperSpeechToText, STTOptions }
+import org.llm4s.speech.stt.{ VoskSpeechToText, WhisperSpeechToText, STTOptions }
 import org.llm4s.speech.tts.{ Tacotron2TextToSpeech, TTSOptions }
 import org.llm4s.speech.util.PlatformCommands
 
@@ -198,9 +198,9 @@ object SpeechSamples {
     println(res.fold(err => s"STT error: ${err.formatted}", t => s"Transcript: ${t.text}"))
   }
 
-  def demoSphinx(filePath: String): Unit = {
-    println(s"Testing Sphinx4 STT on ${PlatformCommands.platformName}")
-    val stt = new Sphinx4SpeechToText()
+  def demoVosk(filePath: String): Unit = {
+    println(s"Testing Vosk STT on ${PlatformCommands.platformName}")
+    val stt = new VoskSpeechToText()
     val res = stt.transcribe(AudioInput.FileAudio(Paths.get(filePath)), STTOptions(language = Some("en")))
     println(res.fold(err => s"STT error: ${err.formatted}", t => s"Transcript: ${t.text}"))
   }
@@ -222,16 +222,18 @@ object SpeechSamples {
     val toneWavFile = createToneWavFile()
     val speechLikeWavFile = createSpeechLikeWavFile()
     
-    println(s"Created silence WAV file: ${silenceWavFile}")
-    println(s"Silence file size: ${Files.size(silenceWavFile)} bytes")
-    println(s"Created tone WAV file: ${toneWavFile}")
-    println(s"Tone file size: ${Files.size(toneWavFile)} bytes")
-    println(s"Created speech-like WAV file: ${speechLikeWavFile}")
-    println(s"Speech-like file size: ${Files.size(speechLikeWavFile)} bytes")
+    println(
+      s"""
+         |Created test audio files:
+         |  Silence WAV: ${silenceWavFile} (${Files.size(silenceWavFile)} bytes)
+         |  Tone WAV: ${toneWavFile} (${Files.size(toneWavFile)} bytes)
+         |  Speech-like WAV: ${speechLikeWavFile} (${Files.size(speechLikeWavFile)} bytes)
+         |""".stripMargin
+    )
     
     println("\n--- Testing STT (Mock) ---")
     demoWhisper(silenceWavFile.toString)
-    demoSphinx(silenceWavFile.toString)
+    demoVosk(silenceWavFile.toString)
     
     println("\n--- Testing STT (Real Whisper - Silence) ---")
     println("Note: This requires 'whisper' CLI to be installed (pip install openai-whisper)")

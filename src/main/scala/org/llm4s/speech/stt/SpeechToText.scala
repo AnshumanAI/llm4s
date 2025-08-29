@@ -41,3 +41,5 @@ trait SpeechToText {
   def name: String
   def transcribe(input: AudioInput, options: STTOptions = STTOptions()): Result[Transcription]
 }
+
+
