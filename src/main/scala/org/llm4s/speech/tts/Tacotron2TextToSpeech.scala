@@ -19,9 +19,9 @@ final class Tacotron2TextToSpeech(
 
   override def synthesize(text: String, options: TTSOptions): Result[GeneratedAudio] =
     try {
-      val tmpOut = Files.createTempFile("llm4s-tts-", ".wav")
+      val tmpOut      = Files.createTempFile("llm4s-tts-", ".wav")
       val baseCommand = command ++ Seq("--text", text, "--out", tmpOut.toString)
-      
+
       val optFlags = List(
         options.voice.map(v => Seq("--voice", v)),
         options.language.map(l => Seq("--lang", l)),
@@ -29,7 +29,7 @@ final class Tacotron2TextToSpeech(
         options.pitchSemitones.map(p => Seq("--pitch", p.toString)),
         options.volumeGainDb.map(v => Seq("--gain", v.toString))
       ).flatten
-      
+
       val args = baseCommand ++ optFlags.combineAll
 
       val _ = args.!

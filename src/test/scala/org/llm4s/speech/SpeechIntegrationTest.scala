@@ -107,7 +107,7 @@ class SpeechIntegrationTest extends AnyFunSuite with Matchers {
 
   test("AudioConverter should compose operations") {
     import org.llm4s.speech.processing.AudioConverter
-    
+
     val converter = AudioConverter.sttPreprocessor(targetRate = 16000)
     converter.name should include("mono-converter")
     converter.name should include("resample-converter-16000Hz")

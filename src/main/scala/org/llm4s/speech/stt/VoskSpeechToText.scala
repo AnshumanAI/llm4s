@@ -1,11 +1,13 @@
 package org.llm4s.speech.stt
 
-import org.llm4s.speech.AudioInput
-import org.llm4s.speech.util.Result
-import org.llm4s.llmconnect.error.LLMError
+import org.llm4s.speech.{ AudioInput, AudioMeta }
+import org.llm4s.types.Result
+import org.llm4s.error.LLMError
 import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import org.llm4s.speech.processing.AudioPreprocessing
 
 /**
  * Vosk-based speech-to-text implementation.
@@ -14,27 +16,25 @@ import java.io.ByteArrayInputStream
 final class VoskSpeechToText(
   modelPath: Option[String] = None
 ) extends SpeechToText {
-  
+
   override val name: String = "vosk"
-  
-  override def transcribe(input: AudioInput, options: STTOptions): Result[Transcription] = {
+
+  override def transcribe(input: AudioInput, options: STTOptions): Result[Transcription] =
     try {
       // Use default English model if no path provided
-      val model = new Model(modelPath.getOrElse("models/vosk-model-small-en-us-0.15"))
+      val model      = new Model(modelPath.getOrElse("models/vosk-model-small-en-us-0.15"))
       val recognizer = new Recognizer(model, 16000.0f) // Vosk expects 16kHz
-      
+
       // Prepare audio for Vosk (16kHz mono PCM)
       val preparedAudio = prepareAudioForVosk(input)
-      
+
       // Process audio in chunks
-      val chunkSize = 4096
+      val chunkSize   = 4096
       val audioStream = new ByteArrayInputStream(preparedAudio)
-      val buffer = new Array[Byte](chunkSize)
-      
+      val buffer      = new Array[Byte](chunkSize)
+
       var finalResult = ""
-      var confidence = 0.0
-      var wordTimestamps = List.empty[WordTimestamp]
-      
+
       var bytesRead = audioStream.read(buffer)
       while (bytesRead > 0) {
         if (recognizer.acceptWaveForm(buffer, bytesRead)) {
@@ -45,31 +45,43 @@ final class VoskSpeechToText(
         }
         bytesRead = audioStream.read(buffer)
       }
-      
+
       // Get final result
       val finalPartial = recognizer.getFinalResult()
       finalResult += finalPartial
-      
+
       audioStream.close()
       recognizer.close()
       model.close()
-      
-      Right(Transcription(
-        text = finalResult.trim,
-        confidence = Some(confidence),
-        wordTimestamps = wordTimestamps,
-        language = options.language.getOrElse("en")
-      ))
-      
+
+      Right(
+        Transcription(
+          text = finalResult.trim,
+          language = options.language.orElse(Some("en")),
+          confidence = None,
+          timestamps = Nil,
+          meta = None
+        )
+      )
+
     } catch {
-      case e: Exception => 
+      case e: Exception =>
         Left(LLMError.fromThrowable(e))
     }
-  }
-  
-  private def prepareAudioForVosk(input: AudioInput): Array[Byte] = {
-    // Convert audio to 16kHz mono PCM format expected by Vosk
-    // This would integrate with our AudioPreprocessing utilities
-    input.audioData // Simplified - would need proper conversion
-  }
+
+  private def prepareAudioForVosk(input: AudioInput): Array[Byte] =
+    input match {
+      case AudioInput.FileAudio(path) => Files.readAllBytes(path)
+      case AudioInput.BytesAudio(bytes, sampleRate, channels) =>
+        val meta = AudioMeta(sampleRate = sampleRate, numChannels = channels, bitDepth = 16)
+        AudioPreprocessing
+          .standardizeForSTT(bytes, meta, targetRate = 16000)
+          .fold(_ => bytes, { case (b, _) => b })
+      case AudioInput.StreamAudio(stream, sampleRate, channels) =>
+        val bytes = stream.readAllBytes()
+        val meta  = AudioMeta(sampleRate = sampleRate, numChannels = channels, bitDepth = 16)
+        AudioPreprocessing
+          .standardizeForSTT(bytes, meta, targetRate = 16000)
+          .fold(_ => bytes, { case (b, _) => b })
+    }
 }

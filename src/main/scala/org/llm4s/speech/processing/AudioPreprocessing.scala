@@ -55,20 +55,20 @@ object AudioPreprocessing {
         val numFrames     = bytes.length / frameSize
         val monoFrameSize = meta.bitDepth / 8
         val out           = new Array[Byte](numFrames * monoFrameSize)
-        
+
         (0 until numFrames).foreach { frameIndex =>
           val sum = (0 until meta.numChannels).foldLeft(0) { (acc, ch) =>
-            val base = frameIndex * frameSize + ch * (meta.bitDepth / 8)
+            val base   = frameIndex * frameSize + ch * (meta.bitDepth / 8)
             val sample = ((bytes(base + 1) << 8) | (bytes(base) & 0xff)).toShort.toInt
             acc + sample
           }
-          
-          val avg: Short = (sum / meta.numChannels).toShort
+
+          val avg: Short   = (sum / meta.numChannels).toShort
           val outByteIndex = frameIndex * 2
           out(outByteIndex) = (avg & 0xff).toByte
           out(outByteIndex + 1) = ((avg >> 8) & 0xff).toByte
         }
-        
+
         Right(out -> meta.copy(numChannels = 1))
       } catch {
         case e: Exception => Left(OperationFailed(Option(e.getMessage).getOrElse("Mono mix failed")))
@@ -82,8 +82,8 @@ object AudioPreprocessing {
       val numFrames  = bytes.length / frameSize
       def frameLoud(frameIdx: Int): Boolean = {
         val maxAmplitude = (0 until meta.numChannels).foldLeft(0) { (max, ch) =>
-          val base = frameIdx * frameSize + ch * sampleSize
-          val sample = ((bytes(base + 1) << 8) | (bytes(base) & 0xff)).toShort
+          val base      = frameIdx * frameSize + ch * sampleSize
+          val sample    = ((bytes(base + 1) << 8) | (bytes(base) & 0xff)).toShort
           val amplitude = math.abs(sample.toInt)
           math.max(max, amplitude)
         }
@@ -117,4 +117,3 @@ object AudioPreprocessing {
   def wrap(bytes: Array[Byte], meta: AudioMeta, format: AudioFormat = AudioFormat.WavPcm16): GeneratedAudio =
     GeneratedAudio(bytes, meta, format)
 }
-nire 

@@ -71,5 +71,3 @@ object Sphinx4Config {
       }
   }
 }
-
-

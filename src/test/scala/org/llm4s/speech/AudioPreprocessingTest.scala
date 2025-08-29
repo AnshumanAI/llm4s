@@ -13,5 +13,3 @@ class AudioPreprocessingTest extends AnyFunSuite {
     assert(out.exists(_._2.numChannels == 1))
   }
 }
-
-

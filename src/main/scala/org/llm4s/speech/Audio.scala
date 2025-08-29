@@ -31,5 +31,3 @@ final case class GeneratedAudio(
   meta: AudioMeta,
   format: AudioFormat
 )
-
-
