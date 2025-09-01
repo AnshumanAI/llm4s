@@ -1,11 +1,13 @@
 package org.llm4s.speech.stt
 
-import org.llm4s.error.LLMError
 import org.llm4s.types.Result
 import org.llm4s.speech.AudioInput
+import cats.implicits._
 
 import java.nio.file.{ Files, Path }
 import scala.sys.process._
+import scala.util.Try
+import org.llm4s.types.TryOps
 
 /**
  * Enhanced Whisper integration via CLI (whisper.cpp or openai-whisper).
@@ -19,7 +21,7 @@ final class WhisperSpeechToText(
   override val name: String = "whisper-cli"
 
   override def transcribe(input: AudioInput, options: STTOptions): Result[Transcription] =
-    try {
+    Try {
       val wav: Path = input match {
         case AudioInput.FileAudio(path) => path
         case AudioInput.BytesAudio(bytes, _, _) =>
@@ -37,10 +39,8 @@ final class WhisperSpeechToText(
       val output     = args.!!
       val transcript = parseWhisperOutput(output, options)
 
-      Right(transcript)
-    } catch {
-      case e: Exception => Left(LLMError.fromThrowable(e))
-    }
+      transcript
+    }.toResult
 
   private def buildWhisperArgs(inputPath: Path, options: STTOptions): Seq[String] = {
     val baseArgs = command ++ Seq(
@@ -51,11 +51,13 @@ final class WhisperSpeechToText(
       outputFormat
     )
 
-    val languageArgs  = options.language.map(l => Seq("--language", l)).getOrElse(Seq.empty)
-    val promptArgs    = options.prompt.map(p => Seq("--initial_prompt", p)).getOrElse(Seq.empty)
-    val timestampArgs = if (options.enableTimestamps) Seq("--word_timestamps", "True") else Seq.empty
+    val optFlags = List(
+      options.language.map(l => Seq("--language", l)),
+      options.prompt.map(p => Seq("--initial_prompt", p)),
+      if (options.enableTimestamps) Some(Seq("--word_timestamps", "True")) else None
+    ).flatten
 
-    baseArgs ++ languageArgs ++ promptArgs ++ timestampArgs
+    baseArgs ++ optFlags.combineAll
   }
 
   private def parseWhisperOutput(output: String, options: STTOptions): Transcription = {

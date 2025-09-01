@@ -98,17 +98,6 @@ val stt = new VoskSpeechToText()
 
 // Use custom model path
 val stt = new VoskSpeechToText(modelPath = Some("/path/to/vosk-model"))
-val config = Sphinx4Config(
-  acousticModelPath = "/path/to/acoustic/model",
-  languageModelPath = "/path/to/language/model",
-  dictionaryPath = "/path/to/dictionary"
-)
-
-val stt = new Sphinx4SpeechToText(
-  acousticModelPath = Some(config.acousticModelPath),
-  languageModelPath = Some(config.acousticModelPath),
-  dictionaryPath = Some(config.dictionaryPath)
-)
 ```
 
 ### Environment Variables

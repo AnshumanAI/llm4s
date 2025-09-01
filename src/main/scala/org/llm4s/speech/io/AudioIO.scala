@@ -1,6 +1,6 @@
 package org.llm4s.speech.io
 
-import org.llm4s.speech.{ GeneratedAudio, AudioMeta }
+import org.llm4s.speech.GeneratedAudio
 import org.llm4s.error.LLMError
 import org.llm4s.types.Result
 

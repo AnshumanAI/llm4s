@@ -2,7 +2,7 @@ package org.llm4s.speech.tts
 
 import org.llm4s.error.LLMError
 import org.llm4s.types.Result
-import org.llm4s.speech.{ AudioFormat, GeneratedAudio, AudioMeta }
+import org.llm4s.speech.{ AudioFormat, GeneratedAudio }
 
 /**
  * Models for text-to-speech.

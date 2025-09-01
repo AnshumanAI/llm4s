@@ -6,6 +6,8 @@ import org.llm4s.speech.{ AudioMeta, AudioFormat, GeneratedAudio }
 
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import javax.sound.sampled.{ AudioFormat => JAudioFormat, AudioInputStream, AudioSystem }
+import scala.util.Try
+import org.llm4s.types.TryOps
 
 /**
  * Functional audio preprocessing utilities.
@@ -19,7 +21,7 @@ object AudioPreprocessing {
 
   /** Resample PCM16 little-endian bytes to target sample rate using Java Sound. */
   def resamplePcm16(bytes: Array[Byte], source: AudioMeta, targetRate: Int): Result[(Array[Byte], AudioMeta)] =
-    try {
+    Try {
       val srcFormat = new JAudioFormat(
         source.sampleRate.toFloat,
         source.bitDepth,
@@ -41,16 +43,14 @@ object AudioPreprocessing {
       val buf       = new Array[Byte](8192)
       var read      = 0
       while ({ read = converted.read(buf); read } != -1) out.write(buf, 0, read)
-      Right(out.toByteArray -> source.copy(sampleRate = targetRate))
-    } catch {
-      case e: Exception => Left(OperationFailed(Option(e.getMessage).getOrElse("Resample failed")))
-    }
+      out.toByteArray -> source.copy(sampleRate = targetRate)
+    }.toResult.left.map(_ => OperationFailed("Resample failed"))
 
   /** Convert to mono by averaging channels (PCM16 little-endian). */
   def toMono(bytes: Array[Byte], meta: AudioMeta): Result[(Array[Byte], AudioMeta)] =
     if (meta.numChannels <= 1) Right((bytes, meta))
     else
-      try {
+      Try {
         val frameSize     = (meta.bitDepth / 8) * meta.numChannels
         val numFrames     = bytes.length / frameSize
         val monoFrameSize = meta.bitDepth / 8
@@ -69,14 +69,12 @@ object AudioPreprocessing {
           out(outByteIndex + 1) = ((avg >> 8) & 0xff).toByte
         }
 
-        Right(out -> meta.copy(numChannels = 1))
-      } catch {
-        case e: Exception => Left(OperationFailed(Option(e.getMessage).getOrElse("Mono mix failed")))
-      }
+        out -> meta.copy(numChannels = 1)
+      }.toResult.left.map(_ => OperationFailed("Mono mix failed"))
 
   /** Trim leading and trailing silence using a simple amplitude threshold on PCM16. */
   def trimSilence(bytes: Array[Byte], meta: AudioMeta, threshold: Int = 512): Result[(Array[Byte], AudioMeta)] =
-    try {
+    Try {
       val sampleSize = meta.bitDepth / 8
       val frameSize  = sampleSize * meta.numChannels
       val numFrames  = bytes.length / frameSize
@@ -89,18 +87,22 @@ object AudioPreprocessing {
         }
         maxAmplitude >= threshold
       }
-      var start = 0
-      while (start < numFrames && !frameLoud(start)) start += 1
-      var end = numFrames - 1
-      while (end >= start && !frameLoud(end)) end -= 1
+      val start = {
+        var s = 0
+        while (s < numFrames && !frameLoud(s)) s += 1
+        s
+      }
+      val end = {
+        var e = numFrames - 1
+        while (e >= start && !frameLoud(e)) e -= 1
+        e
+      }
       val outStart = start * frameSize
       val outEnd   = (end + 1) * frameSize
       val sliced =
         if (outEnd > outStart) java.util.Arrays.copyOfRange(bytes, outStart, outEnd) else Array.emptyByteArray
-      Right(sliced -> meta)
-    } catch {
-      case e: Exception => Left(OperationFailed(Option(e.getMessage).getOrElse("Trim failed")))
-    }
+      sliced -> meta
+    }.toResult.left.map(_ => OperationFailed("Trim failed"))
 
   /** Compose multiple steps functionally */
   def standardizeForSTT(

@@ -10,6 +10,10 @@ import org.llm4s.types.Result
 trait AudioConverter[From, To] {
   def convert(input: From): Result[To]
   def name: String
+
+  /** Compose this converter with another converter */
+  def andThen[C](next: AudioConverter[To, C]): AudioConverter[From, C] =
+    AudioConverter.CompositeConverter(this, next)
 }
 
 /**
@@ -73,14 +77,44 @@ object AudioConverter {
   }
 
   /**
-   * Standard STT preprocessing pipeline
+   * Identity converter (does nothing)
+   */
+  case class IdentityConverter[A]() extends AudioConverter[A, A] {
+    def convert(input: A): Result[A] = Right(input)
+    def name: String                 = "identity"
+  }
+
+  /**
+   * Standard STT preprocessing pipeline using functional composition
    */
   def sttPreprocessor(targetRate: Int = 16000): AudioConverter[(Array[Byte], AudioMeta), (Array[Byte], AudioMeta)] =
-    CompositeConverter(
-      MonoConverter(),
-      CompositeConverter(
-        ResampleConverter(targetRate),
-        SilenceTrimmer()
+    MonoConverter()
+      .andThen(ResampleConverter(targetRate))
+      .andThen(SilenceTrimmer())
+
+  /**
+   * Alternative STT preprocessor that can be customized
+   */
+  def customSttPreprocessor(
+    monoConversion: Boolean = true,
+    targetRate: Option[Int] = Some(16000),
+    silenceThreshold: Option[Int] = Some(512)
+  ): AudioConverter[(Array[Byte], AudioMeta), (Array[Byte], AudioMeta)] = {
+    type AudioData = (Array[Byte], AudioMeta)
+
+    val mono: AudioConverter[AudioData, AudioData] =
+      if (monoConversion) MonoConverter() else IdentityConverter[AudioData]()
+
+    val resample: AudioConverter[AudioData, AudioData] =
+      targetRate.fold(IdentityConverter[AudioData](): AudioConverter[AudioData, AudioData])(rate =>
+        ResampleConverter(rate)
       )
-    )
+
+    val silence: AudioConverter[AudioData, AudioData] =
+      silenceThreshold.fold(IdentityConverter[AudioData](): AudioConverter[AudioData, AudioData])(threshold =>
+        SilenceTrimmer(threshold)
+      )
+
+    mono.andThen(resample).andThen(silence)
+  }
 }
