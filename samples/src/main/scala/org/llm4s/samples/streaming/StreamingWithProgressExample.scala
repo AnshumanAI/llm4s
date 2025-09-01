@@ -104,7 +104,7 @@ object StreamingWithProgressExample {
         println(s"  Throughput:        ${(charCount * 1000.0 / totalTime).formatted("%.1f")} chars/sec")
         
         // Show accumulated content stats
-        val fullContent = accumulator.getCurrentContent()
+        val fullContent = accumulator.getCurrentContent
         val wordCount = fullContent.split("\\s+").length
         val lineCount = fullContent.split("\n").length
         

@@ -744,19 +744,35 @@ object Result {
   def success[A](value: A): Result[A]                        = Right(value)
   def failure[A](error: org.llm4s.error.LLMError): Result[A] = Left(error)
 
-  private def cleanly[A](block: => A)(cleanup: => Unit): A =
+  /**
+   * Executes a block of code and ensures a finallyBlock function is always run afterward,
+   * regardless of whether the block succeeds or throws.
+   *
+   * @param block   The main code to execute, which returns an A.
+   * @param finallyBlock A zero-argument function to run afterward (e.g., close fd, log, release resources).
+   */
+  private def cleanly[A, B](block: => A)(finallyBlock: => Unit): A =
     try block
-    finally cleanup
+    finally finallyBlock
 
-  def fromTry[A](t: Try[A]): Result[A] =
-    cleanly {
-      t match {
-        case scala.util.Success(value)     => success(value)
-        case scala.util.Failure(throwable) => failure(error.LLMError.fromThrowable(throwable))
-      }
-    } {
-      logger.warn(s"Finally block executed in fromTry with Try: $t")
+  /**
+   * Converts a scala.util.Try[A] into a Result[A], while allowing a custom finallyBlock action.
+   *
+   * @param t       The Try[A] to wrap.
+   * @param finallyBlock A user-provided finallyBlock function to run after processing.
+   * @return A Result[A] representing success or failure.
+   */
+  def fromTry[A](
+    t: Try[A],
+    finallyBlock: () => Unit = () => logger.info("Running default cleanup in fromTry")
+  ): Result[A] = cleanly {
+    t match {
+      case scala.util.Success(value)     => success(value)
+      case scala.util.Failure(throwable) => failure(error.LLMError.fromThrowable(throwable))
     }
+  } {
+    finallyBlock()
+  }
 
   def fromOption[A](opt: Option[A], error: => org.llm4s.error.LLMError): Result[A] =
     opt.toRight(error)

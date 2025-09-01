@@ -1,5 +1,6 @@
 package org.llm4s.samples.embeddingsupport
 
+import org.llm4s.config.ConfigReader
 import org.llm4s.llmconnect.EmbeddingClient
 import org.llm4s.llmconnect.config.EmbeddingConfig
 import org.llm4s.llmconnect.model._
@@ -7,9 +8,9 @@ import org.llm4s.llmconnect.utils.{ ModelSelector, SimilarityUtils }
 import org.llm4s.config.ConfigReader.LLMConfig
 import org.slf4j.LoggerFactory
 
-import java.nio.file.{ Files, Path, Paths }
-import java.time.{ ZonedDateTime, ZoneId }
-import scala.jdk.CollectionConverters._
+import java.nio.file.{Files, Path, Paths}
+import java.time.{ZoneId, ZonedDateTime}
+import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 object EmbeddingExample {
@@ -59,7 +60,10 @@ object EmbeddingExample {
     }
 
     val query       = EmbeddingConfig.query(config)
-    val queryVecOpt = embedQueryOnce(client, query, config)
+    val queryVecOpt = for {
+      configQuery <- query
+      quertVect <- embedQueryOnce(client, configQuery, config)
+    } yield quertVect
 
     // accumulate results
     val perFileRows = collection.mutable.ArrayBuffer.empty[(String, Seq[Row])]
@@ -87,7 +91,9 @@ object EmbeddingExample {
     }
 
     // ---- print report ----
-    println(renderHeader(provider = EmbeddingConfig.activeProvider(config), query = query, config))
+    for {
+      query <- query
+    } yield println(renderHeader(provider = EmbeddingConfig.activeProvider(config), query = query, config))
 
     perFileRows.foreach { case (name, rows) =>
       println(renderFileSection(name, rows))
