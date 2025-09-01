@@ -11,6 +11,8 @@ val scala3CompilerOptions = Seq(
   "-Wconf:cat=unused:s",   // suppress unused warnings
   "-Wconf:cat=deprecation:s", // suppress deprecation warnings
   "-Wunused:nowarn",
+  "-feature",
+  "-unchecked",
   "-source:3.3",
   "-Wsafe-init",
   "-deprecation",
@@ -24,7 +26,6 @@ val scala2CompilerOptions = Seq(
   "-deprecation",
   "-Wunused:nowarn",
   "-Wunused:imports",
-  "-Wunused:privates",
   "-Wunused:locals",
   "-Wunused:patvars",
   "-Wunused:params",
@@ -243,7 +244,21 @@ lazy val crossTestScala3 = (project in file("crosstest/scala3"))
 
 addCommandAlias("buildAll", ";clean;+compile;+test")
 addCommandAlias("publishAll", ";clean;+publish")
-addCommandAlias("testAll", ";+test")
+// Run tests across all modules, including samples and crossTest modules
+addCommandAlias(
+  "testAll",
+  ";project root; +test; project shared; +test; project workspaceRunner; +test; project samples; +test; project root; +publishLocal; project crossTestScala2; test; project crossTestScala3; test"
+)
+
+addCommandAlias(
+  "cleanTestAll",
+  ";project root; clean; project shared; clean; project workspaceRunner; clean; project samples; clean; project crossTestScala2; clean; project crossTestScala3; clean; project root; +publishLocal; testAll"
+)
+
+addCommandAlias(
+  "cleanTestAllAndFormat",
+  ";scalafmtAll;project root; clean; project shared; clean; project workspaceRunner; clean; project samples; clean; project crossTestScala2; clean; project crossTestScala3; clean; project root; +publishLocal; testAll"
+)
 addCommandAlias("compileAll", ";+compile")
 addCommandAlias("testCross", ";crossTestScala2/test;crossTestScala3/test")
 addCommandAlias("fullCrossTest", ";clean ;crossTestScala2/clean ;crossTestScala3/clean ;+publishLocal ;testCross")

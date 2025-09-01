@@ -1,5 +1,7 @@
 package org.llm4s.codegen
 
+import org.llm4s.llmconnect.model.MessageRole
+import org.llm4s.config.ConfigReader.LLMConfig
 import org.slf4j.LoggerFactory
 
 /**
@@ -14,7 +16,7 @@ object CodeGenExample {
     logger.info(s"Using workspace directory: $workspaceDir")
 
     // Create a CodeWorker instance
-    val codeWorker = new CodeWorker(workspaceDir)
+    val codeWorker = new CodeWorker(workspaceDir)(LLMConfig())
 
     // Define the trace log path
     val traceLogPath = "/Users/rory.graves/workspace/home/llm4s/log/codegen-trace.md"
@@ -38,7 +40,7 @@ object CodeGenExample {
 
             // Print the agent's final response
             finalState.conversation.messages.last match {
-              case msg if msg.role == "assistant" =>
+              case msg if msg.role == MessageRole.Assistant =>
                 logger.info(s"Final agent response: ${msg.content}")
               case _ =>
                 logger.warn("No final assistant message found")

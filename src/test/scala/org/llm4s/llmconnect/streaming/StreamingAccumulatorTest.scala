@@ -13,7 +13,7 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.addChunk(StreamedChunk("msg-1", Some("world"), None, None))
     accumulator.addChunk(StreamedChunk("msg-1", Some("!"), None, None))
 
-    accumulator.getCurrentContent() shouldBe "Hello world!"
+    accumulator.getCurrentContent shouldBe "Hello world!"
   }
 
   test("should handle chunks with no content") {
@@ -23,7 +23,7 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.addChunk(StreamedChunk("msg-1", Some("test"), None, None))
     accumulator.addChunk(StreamedChunk("msg-1", None, None, None))
 
-    accumulator.getCurrentContent() shouldBe "test"
+    accumulator.getCurrentContent shouldBe "test"
   }
 
   test("should track message ID") {
@@ -31,7 +31,7 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
 
     accumulator.addChunk(StreamedChunk("msg-123", Some("content"), None, None))
 
-    val completion = accumulator.toCompletion()
+    val completion = accumulator.toCompletion
     completion.isRight shouldBe true
     completion.toOption.get.id shouldBe "msg-123"
   }
@@ -46,9 +46,9 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.addChunk(StreamedChunk("msg-1", Some("text"), None, None))
     accumulator.addChunk(StreamedChunk("msg-1", None, Some(toolCall2), None))
 
-    val toolCalls = accumulator.getCurrentToolCalls()
+    val toolCalls = accumulator.getCurrentToolCalls
     (toolCalls should have).length(2)
-    toolCalls(0).name shouldBe "function1"
+    toolCalls.head.name shouldBe "function1"
     toolCalls(1).name shouldBe "function2"
   }
 
@@ -68,7 +68,7 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.updateTokens(100, 50)
     accumulator.addChunk(StreamedChunk("msg-1", Some("response"), None, None))
 
-    val completion = accumulator.toCompletion()
+    val completion = accumulator.toCompletion
     completion.isRight shouldBe true
 
     val usage = completion.toOption.get.usage
@@ -86,7 +86,7 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.updateTokens(10, 5)
     accumulator.addChunk(StreamedChunk("msg-456", None, None, Some("stop")))
 
-    val completion = accumulator.toCompletion()
+    val completion = accumulator.toCompletion
     completion.isRight shouldBe true
 
     val comp = completion.toOption.get
@@ -101,11 +101,11 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.addChunk(StreamedChunk("msg-1", Some("content"), None, None))
     accumulator.updateTokens(10, 5)
 
-    accumulator.getCurrentContent() shouldBe "content"
+    accumulator.getCurrentContent shouldBe "content"
 
     accumulator.clear()
 
-    accumulator.getCurrentContent() shouldBe ""
+    accumulator.getCurrentContent shouldBe ""
     accumulator.isComplete shouldBe false
   }
 
@@ -133,9 +133,9 @@ class StreamingAccumulatorTest extends AnyFunSuite with Matchers {
     accumulator.addChunk(StreamedChunk("msg-1", None, Some(partialCall1), None))
     accumulator.addChunk(StreamedChunk("msg-1", None, Some(partialCall2), None))
 
-    val toolCalls = accumulator.getCurrentToolCalls()
+    val toolCalls = accumulator.getCurrentToolCalls
     (toolCalls should have).length(1)
-    toolCalls(0).id shouldBe "tool-1"
-    toolCalls(0).name shouldBe "get_weather"
+    toolCalls.head.id shouldBe "tool-1"
+    toolCalls.head.name shouldBe "get_weather"
   }
 }

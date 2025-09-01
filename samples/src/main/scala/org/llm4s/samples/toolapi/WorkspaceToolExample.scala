@@ -1,17 +1,15 @@
 package org.llm4s.samples.toolapi
 
-import org.llm4s.llmconnect.{ LLM, LLMClient }
-import org.llm4s.llmconnect.model._
 import org.llm4s.llmconnect.config.{ AnthropicConfig, OpenAIConfig }
+import org.llm4s.llmconnect.model._
 import org.llm4s.llmconnect.provider.LLMProvider
-import org.llm4s.shared._
+import org.llm4s.llmconnect.{ LLM, LLMClient }
 import org.llm4s.toolapi._
 import org.llm4s.workspace.ContainerisedWorkspace
 import org.slf4j.LoggerFactory
+import upickle.default._
 
 import scala.annotation.tailrec
-import upickle.default._
-import ujson._
 
 /**
  * Example demonstrating how to use workspace tools with different LLM models
@@ -68,7 +66,9 @@ object WorkspaceToolExample {
         logger.info(s"Testing with OpenAI's $gpt4oModelName...")
         val openaiConfig = OpenAIConfig(
           apiKey = sys.env.getOrElse("OPENAI_API_KEY", ""),
-          model = gpt4oModelName
+          model = gpt4oModelName,
+          organization = None,
+          baseUrl = "https://api.openai.com/v1"
         )
         
         val openaiClient = LLM.client(LLMProvider.OpenAI, openaiConfig)
@@ -78,7 +78,8 @@ object WorkspaceToolExample {
         logger.info(s"Testing with Anthropic's $sonnetModelName...")
         val anthropicConfig = AnthropicConfig(
           apiKey = sys.env.getOrElse("ANTHROPIC_API_KEY", ""),
-          model = sonnetModelName
+          model = sonnetModelName,
+          baseUrl = "https://api.anthropic.com"
         )
         
         val anthropicClient = LLM.client(LLMProvider.Anthropic, anthropicConfig)

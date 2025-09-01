@@ -7,11 +7,24 @@ package org.llm4s.error
 final case class RateLimitError private (
   override val message: String,
   retryAfter: Option[Long],
-  provider: String
+  provider: String,
+  requestsRemaining: Option[Int] = None,
+  resetTime: Option[Long] = None
 ) extends LLMError
     with RecoverableError {
-  override val context: Map[String, String] = Map("provider" -> provider) ++
-    retryAfter.map(r => Map("retryAfter" -> r.toString)).getOrElse(Map.empty)
+
+  override val maxRetries: Int = 5
+
+  // Intelligent retry delay calculation
+  override def retryDelay: Option[Long] = retryAfter.orElse {
+    Some(Math.min(30000, 1000 * Math.pow(2, maxRetries).toLong)) // Exponential backoff, max 30s
+  }
+
+  override val context: Map[String, String] = Map(
+    "provider" -> provider
+  ) ++ retryAfter.map("retryAfter" -> _.toString) ++
+    requestsRemaining.map("requestsRemaining" -> _.toString) ++
+    resetTime.map("resetTime" -> _.toString)
 }
 
 object RateLimitError {

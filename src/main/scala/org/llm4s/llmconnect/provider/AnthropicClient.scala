@@ -11,7 +11,6 @@ import org.llm4s.toolapi.{ ObjectSchema, ToolFunction }
 import org.llm4s.types.Result
 import org.llm4s.error.{ LLMError, AuthenticationError, RateLimitError, ValidationError }
 
-import java.lang
 import java.util.Optional
 import scala.jdk.CollectionConverters._
 
@@ -223,7 +222,7 @@ curl https://api.anthropic.com/v1/messages \
                 // inputTokens seems to return Optional<Long>
                 val inputTokens = inputTokensRaw match {
                   case opt: Optional[_] =>
-                    opt.asInstanceOf[Optional[lang.Long]].toScala.map(_.toInt).getOrElse(0)
+                    opt.toScala.map(_.toInt).getOrElse(0)
                   case null => 0
                 }
 
@@ -245,7 +244,7 @@ curl https://api.anthropic.com/v1/messages \
         streamResponse.close()
 
       // Return the accumulated completion
-      accumulator.toCompletion()
+      accumulator.toCompletion
     } catch {
       case e: com.anthropic.errors.UnauthorizedException =>
         Left(AuthenticationError("anthropic", e.getMessage))
@@ -327,15 +326,15 @@ curl https://api.anthropic.com/v1/messages \
 
     // Extract tool calls if present
     val toolCalls = extractToolCalls(response)
-
+    val message   = AssistantMessage(contentOpt = content, toolCalls = toolCalls)
     // Create completion
     Completion(
       id = response.id(),
+      content = message.content,
+      model = response.model().asString(),
+      toolCalls = toolCalls.toList,
       created = System.currentTimeMillis() / 1000, // Use current time as created timestamp
-      message = AssistantMessage(
-        contentOpt = content,
-        toolCalls = toolCalls
-      ),
+      message = message,
       usage = Some(
         TokenUsage(
           promptTokens = response.usage().inputTokens().toInt,

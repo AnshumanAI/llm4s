@@ -59,11 +59,11 @@ case class AgentState(
     conversation.messages.zipWithIndex.foreach { case (message, index) =>
       val step = index + 1
       val roleMarker = message.role match {
-        case "user"      => "👤 USER"
-        case "assistant" => "🤖 ASSISTANT"
-        case "system"    => "⚙️ SYSTEM"
-        case "tool"      => "🛠️ TOOL"
-        case _           => s"[${message.role.toUpperCase}]"
+        case MessageRole.User      => "👤 USER"
+        case MessageRole.Assistant => "🤖 ASSISTANT"
+        case MessageRole.System    => "⚙️ SYSTEM"
+        case MessageRole.Tool      => "🛠️ TOOL"
+        case _                     => s"[${message.role.name.toUpperCase}]"
       }
 
       println(s"STEP $step: $roleMarker")

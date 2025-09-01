@@ -1,13 +1,14 @@
 package org.llm4s
 
-import org.llm4s.error.ConfigurationError
+import org.llm4s.error.{ ConfigurationError, ValidationError }
 import org.llm4s.llmconnect.model.StreamedChunk
 import org.llm4s.toolapi.ToolFunction
 import org.llm4s.types.{ AsyncResult, Result }
-import upickle.default.{ ReadWriter => RW, readwriter }
+import org.slf4j.Logger
+import upickle.default.{ readwriter, ReadWriter => RW }
 
 import java.time.Instant
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 /**
@@ -94,6 +95,28 @@ package object types {
     override def toString: String = value
   }
 
+  object ConversationId {
+
+    /**
+     * Generates a new unique conversation ID using UUID
+     */
+    def generate(): ConversationId =
+      ConversationId(java.util.UUID.randomUUID().toString)
+
+    /**
+     * Creates a ConversationId with validation
+     *
+     * @param value The ID string to validate
+     * @return Either a validation error or valid ConversationId
+     */
+    def create(value: String): Result[ConversationId] =
+      if (value.trim.nonEmpty) {
+        Right(ConversationId(value.trim))
+      } else {
+        Left(ValidationError("Conversation ID cannot be empty", "conversationId"))
+      }
+  }
+
   /**
    * Type-safe wrapper for completion IDs
    */
@@ -102,11 +125,15 @@ package object types {
   }
 
   object CompletionId {
-    def apply(value: String): Result[CompletionId] =
-      if (value.trim.nonEmpty) Right(new CompletionId(value.trim))
-      else Left(error.ValidationError("completionId", "Cannot be empty"))
+    def generate(): CompletionId =
+      CompletionId(java.util.UUID.randomUUID().toString)
 
-    def generate(): CompletionId = new CompletionId(java.util.UUID.randomUUID().toString)
+    def create(value: String): Result[CompletionId] =
+      if (value.trim.nonEmpty) {
+        Right(CompletionId(value.trim))
+      } else {
+        Left(ValidationError("Completion ID cannot be empty", "completionId"))
+      }
   }
 
   /**
@@ -129,6 +156,17 @@ package object types {
    */
   final case class ToolCallId(value: String) extends AnyVal {
     override def toString: String = value
+  }
+
+  object ToolCallId {
+    def generate(): ToolCallId = ToolCallId(java.util.UUID.randomUUID().toString)
+
+    def create(value: String): Result[ToolCallId] =
+      if (value.trim.nonEmpty) {
+        Right(ToolCallId(value.trim))
+      } else {
+        Left(ValidationError("Tool call ID cannot be empty", "toolCallId"))
+      }
   }
 
   /**
@@ -690,13 +728,23 @@ package object types {
  */
 
 object Result {
+  val logger: Logger                                         = org.slf4j.LoggerFactory.getLogger(getClass)
   def success[A](value: A): Result[A]                        = Right(value)
   def failure[A](error: org.llm4s.error.LLMError): Result[A] = Left(error)
 
-  def fromTry[A](t: scala.util.Try[A]): Result[A] = t match {
-    case scala.util.Success(value)     => success(value)
-    case scala.util.Failure(throwable) => failure(error.LLMError.fromThrowable(throwable))
-  }
+  private def cleanly[A](block: => A)(cleanup: => Unit): A =
+    try block
+    finally cleanup
+
+  def fromTry[A](t: Try[A]): Result[A] =
+    cleanly {
+      t match {
+        case scala.util.Success(value)     => success(value)
+        case scala.util.Failure(throwable) => failure(error.LLMError.fromThrowable(throwable))
+      }
+    } {
+      logger.warn(s"Finally block executed in fromTry with Try: $t")
+    }
 
   def fromOption[A](opt: Option[A], error: => org.llm4s.error.LLMError): Result[A] =
     opt.toRight(error)
@@ -712,11 +760,52 @@ object Result {
   def traverse[A, B](list: List[A])(f: A => Result[B]): Result[List[B]] =
     sequence(list.map(f))
 
+  // Combinators for multiple Results
   def combine[A, B](ra: Result[A], rb: Result[B]): Result[(A, B)] =
     for {
       a <- ra
       b <- rb
     } yield (a, b)
+
+  def combine[A, B, C](ra: Result[A], rb: Result[B], rc: Result[C]): Result[(A, B, C)] =
+    for {
+      a <- ra
+      b <- rb
+      c <- rc
+    } yield (a, b, c)
+
+  def safely[A](operation: => A): Result[A] = fromTry(Try(operation))
+
+  // Async support
+  def fromFuture[A](future: Future[A])(implicit ec: ExecutionContext): Future[Result[A]] =
+    future.map(success).recover { case ex => failure(error.LLMError.fromThrowable(ex)) }
+
+  /**
+   * Create Result from boolean condition
+   */
+  def fromBoolean(condition: Boolean, error: org.llm4s.error.LLMError): Result[Unit] =
+    if (condition) success(()) else failure(error)
+
+  /**
+   * Create Result from boolean with custom success value
+   */
+  def fromBooleanWithValue[A](condition: Boolean, successValue: A, error: org.llm4s.error.LLMError): Result[A] =
+    if (condition) success(successValue) else failure(error)
+
+  // Validation that collects all errors
+  def validateAll[A](items: List[A])(validator: A => Result[A]): Either[List[error.LLMError], List[A]] = {
+    val results   = items.map(validator)
+    val errors    = results.collect { case Left(error) => error }
+    val successes = results.collect { case Right(value) => value }
+    if (errors.nonEmpty) Left(errors) else Right(successes)
+  }
+
+  // Resource management
+  def bracket[A, B](acquire: => Result[A])(release: A => Result[Unit])(use: A => Result[B]): Result[B] =
+    acquire.flatMap { resource =>
+      val result = use(resource)
+      release(resource).flatMap(_ => result)
+    }
 }
 
 object AsyncResult {

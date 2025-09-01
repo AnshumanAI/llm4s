@@ -62,12 +62,12 @@ class StreamingAccumulator {
   /**
    * Get the current accumulated content
    */
-  def getCurrentContent(): String = contentBuilder.toString
+  def getCurrentContent: String = contentBuilder.toString
 
   /**
    * Get the current tool calls
    */
-  def getCurrentToolCalls(): Seq[ToolCall] = {
+  def getCurrentToolCalls: Seq[ToolCall] = {
     val completed = toolCalls.toSeq
     val partial = partialToolCalls.values.map { p =>
       ToolCall(
@@ -87,10 +87,10 @@ class StreamingAccumulator {
   /**
    * Convert accumulated data to a Completion
    */
-  def toCompletion(): Result[Completion] =
+  def toCompletion: Result[Completion] =
     try {
       // Finalize tool calls
-      val finalToolCalls = getCurrentToolCalls()
+      val finalToolCalls = getCurrentToolCalls
 
       // Create the assistant message
       val message = AssistantMessage(
@@ -113,8 +113,10 @@ class StreamingAccumulator {
 
       Right(
         Completion(
-          id = messageId.getOrElse(java.util.UUID.randomUUID().toString),
+          id = messageId.getOrElse(""),
           created = System.currentTimeMillis() / 1000,
+          content = contentBuilder.toString(),
+          model = "unknown", // Model info not tracked here
           message = message,
           usage = usage
         )
@@ -150,8 +152,8 @@ class StreamingAccumulator {
    */
   def snapshot(): AccumulatorSnapshot =
     AccumulatorSnapshot(
-      content = getCurrentContent(),
-      toolCalls = getCurrentToolCalls(),
+      content = getCurrentContent,
+      toolCalls = getCurrentToolCalls,
       messageId = messageId,
       finishReason = finishReason,
       promptTokens = promptTokens,

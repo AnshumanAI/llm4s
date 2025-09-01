@@ -1,10 +1,11 @@
 package org.llm4s.agent
 
+import org.llm4s.Result
 import org.llm4s.llmconnect.LLMClient
 import org.llm4s.llmconnect.model._
 import org.llm4s.toolapi._
-import org.slf4j.LoggerFactory
 import org.llm4s.types.Result
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.util.{ Failure, Success, Try }
@@ -66,7 +67,7 @@ class Agent(client: LLMClient) {
               case Seq() => s"[assistant] text: ${completion.message.content}"
               case toolCalls =>
                 val toolNames = toolCalls.map(_.name).mkString(", ")
-                s"[assistant] tools: ${toolCalls.size} tool calls requested (${toolNames})"
+                s"[assistant] tools: ${toolCalls.size} tool calls requested ($toolNames)"
             }
 
             val updatedState = state
@@ -97,7 +98,7 @@ class Agent(client: LLMClient) {
           case Some(assistantMessage) =>
             // Log summary of tools to be processed
             val toolNames    = assistantMessage.toolCalls.map(_.name).mkString(", ")
-            val logMessage   = s"[tools] executing ${assistantMessage.toolCalls.size} tools (${toolNames})"
+            val logMessage   = s"[tools] executing ${assistantMessage.toolCalls.size} tools ($toolNames)"
             val stateWithLog = state.log(logMessage)
 
             // Process the tool calls
@@ -182,18 +183,18 @@ class Agent(client: LLMClient) {
       val step = index + 1
 
       message.role match {
-        case "system" =>
+        case MessageRole.System =>
           sb.append(s"### Step $step: System Message\n\n")
           sb.append("```\n")
           sb.append(message.content)
           sb.append("\n```\n\n")
 
-        case "user" =>
+        case MessageRole.User =>
           sb.append(s"### Step $step: User Message\n\n")
           sb.append(message.content)
           sb.append("\n\n")
 
-        case "assistant" =>
+        case MessageRole.Assistant =>
           sb.append(s"### Step $step: Assistant Message\n\n")
 
           message match {
@@ -221,7 +222,7 @@ class Agent(client: LLMClient) {
               sb.append("\n\n")
           }
 
-        case "tool" =>
+        case MessageRole.Tool =>
           message match {
             case msg: ToolMessage =>
               sb.append(s"### Step $step: Tool Response\n\n")
@@ -239,7 +240,7 @@ class Agent(client: LLMClient) {
           }
 
         case _ =>
-          sb.append(s"### Step $step: ${message.role.capitalize} Message\n\n")
+          sb.append(s"### Step $step: ${message.role} Message\n\n")
           sb.append("```\n")
           sb.append(message.content)
           sb.append("\n```\n\n")
@@ -284,16 +285,16 @@ class Agent(client: LLMClient) {
    * @param traceLogPath The path to write the trace log to
    */
   def writeTraceLog(state: AgentState, traceLogPath: String): Unit = {
-    import java.nio.file.{ Paths, Files }
     import java.nio.charset.StandardCharsets
+    import java.nio.file.{ Files, Paths }
 
-    try {
-      val content = formatStateAsMarkdown(state)
-      Files.write(Paths.get(traceLogPath), content.getBytes(StandardCharsets.UTF_8))
-    } catch {
-      case e: Exception =>
-        logger.error("Failed to write trace log to {}: {}", traceLogPath, e.getMessage, e)
-    }
+    Result
+      .fromTry(Try {
+        val content = formatStateAsMarkdown(state)
+        Files.write(Paths.get(traceLogPath), content.getBytes(StandardCharsets.UTF_8))
+      })
+      .left
+      .foreach(err => logger.error("Failed to write trace log: {}", err.message))
   }
 
   /**

@@ -1,10 +1,14 @@
 package org.llm4s.samples.agent
 
 import org.llm4s.agent.Agent
+import org.llm4s.config.ConfigReader
+import org.llm4s.config.ConfigReader.LLMConfig
 import org.llm4s.llmconnect.LLM
+import org.llm4s.llmconnect.model.MessageRole.Assistant
 import org.llm4s.mcp._
 import org.llm4s.toolapi.tools.WeatherTool
 import org.slf4j.LoggerFactory
+
 import scala.concurrent.duration._
 
 /**
@@ -46,15 +50,15 @@ object MCPAgentExample {
     }
     
     // Test with agent
-    runAgentExample(mcpRegistry)
+    runAgentExample(mcpRegistry)(LLMConfig())
     
     // Clean up
     mcpRegistry.closeMCPClients()
     logger.info("✨ MCP Agent Example completed!")
   }
   
-  private def runAgentExample(registry: MCPToolRegistry): Unit = {
-    val client = LLM.client()
+  private def runAgentExample(registry: MCPToolRegistry)(config:ConfigReader): Unit = {
+    val client    = LLM.client(config)
     val agent = new Agent(client)
     
     val query = "Convert 100 USD to EUR and then check the weather in Paris"
@@ -75,7 +79,7 @@ object MCPAgentExample {
         logger.info(s"✅ Query completed in ${duration}ms")
         
         // Show final answer
-        finalState.conversation.messages.reverse.find(_.role == "assistant") match {
+        finalState.conversation.messages.findLast(_.role == Assistant) match {
           case Some(msg) =>
             logger.info(s"💬 Agent Response: ${msg.content}")
           case None => 

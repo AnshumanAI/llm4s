@@ -1,6 +1,7 @@
 package org.llm4s.trace
 
 import org.llm4s.agent.AgentState
+import org.llm4s.llmconnect.model.MessageRole.{ Assistant, System, Tool, User }
 import org.llm4s.llmconnect.model.{ AssistantMessage, ToolMessage }
 
 import java.time.Instant
@@ -63,11 +64,11 @@ class PrintTracing extends Tracing {
     printSubHeader("Conversation History", MAGENTA)
     state.conversation.messages.zipWithIndex.foreach { case (msg, idx) =>
       val roleColor = msg.role match {
-        case "user"      => BLUE
-        case "assistant" => GREEN
-        case "system"    => YELLOW
-        case "tool"      => CYAN
-        case _           => GRAY
+        case User      => BLUE
+        case Assistant => GREEN
+        case System    => YELLOW
+        case Tool      => CYAN
+        case _         => GRAY
       }
 
       println(s"${BOLD}Message ${idx + 1} (${roleColor}${msg.role}${RESET}${BOLD}):$RESET")

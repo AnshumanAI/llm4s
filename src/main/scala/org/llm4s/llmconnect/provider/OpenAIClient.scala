@@ -1,15 +1,15 @@
 package org.llm4s.llmconnect.provider
 
-import com.azure.ai.openai.{ OpenAIClient => AzureOpenAIClient, OpenAIClientBuilder, OpenAIServiceVersion }
 import com.azure.ai.openai.models._
+import com.azure.ai.openai.{ OpenAIClientBuilder, OpenAIServiceVersion, OpenAIClient => AzureOpenAIClient }
 import com.azure.core.credential.{ AzureKeyCredential, KeyCredential }
+import org.llm4s.error.LLMError
 import org.llm4s.llmconnect.LLMClient
 import org.llm4s.llmconnect.config.{ AzureConfig, OpenAIConfig }
 import org.llm4s.llmconnect.model._
 import org.llm4s.llmconnect.streaming._
 import org.llm4s.toolapi.{ AzureToolHelper, ToolRegistry }
 import org.llm4s.types.Result
-import org.llm4s.error.LLMError
 
 import scala.jdk.CollectionConverters._
 
@@ -145,7 +145,7 @@ class OpenAIClient private (
       }
 
       // Return the accumulated completion
-      accumulator.toCompletion()
+      accumulator.toCompletion
     } catch {
       case e: Exception => Left(LLMError.fromThrowable(e))
     }
@@ -200,19 +200,18 @@ class OpenAIClient private (
   }
 
   private def convertFromOpenAIFormat(completions: ChatCompletions): Completion = {
-    val choice  = completions.getChoices.get(0)
-    val message = choice.getMessage
-
-    // Extract tool calls if present
-    val toolCalls = extractToolCalls(message)
+    val choice           = completions.getChoices.get(0)
+    val message          = choice.getMessage
+    val toolCalls        = extractToolCalls(message)
+    val assistantMessage = AssistantMessage(content = message.getContent, toolCalls = toolCalls)
 
     Completion(
       id = completions.getId,
       created = completions.getCreatedAt.toEpochSecond,
-      message = AssistantMessage(
-        contentOpt = Some(message.getContent),
-        toolCalls = toolCalls
-      ),
+      content = message.getContent,
+      model = completions.getModel,
+      message = assistantMessage,
+      toolCalls = toolCalls.toList,
       usage = Option(completions.getUsage).map(u =>
         TokenUsage(
           promptTokens = u.getPromptTokens,

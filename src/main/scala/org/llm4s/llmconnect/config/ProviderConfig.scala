@@ -1,64 +1,55 @@
 package org.llm4s.llmconnect.config
 
-import org.llm4s.config.EnvLoader
-
+import org.llm4s.config.{ ConfigKeys, ConfigReader }
+import ConfigKeys._
+import org.llm4s.config.DefaultConfig._
 sealed trait ProviderConfig {
   def model: String
 }
 
-object ProviderConfig {
-  def readEnv(key: String): Option[String] =
-    EnvLoader.get(key)
-}
-
 case class OpenAIConfig(
   apiKey: String,
-  model: String = "gpt-4o",
-  organization: Option[String] = None,
-  baseUrl: String = "https://api.openai.com/v1"
+  model: String,
+  organization: Option[String],
+  baseUrl: String
 ) extends ProviderConfig
 
 object OpenAIConfig {
 
-  /**
-   * Create an OpenAIConfig from environment variables
-   */
-  def fromEnv(modelName: String): OpenAIConfig = {
-    val readEnv = ProviderConfig.readEnv _
-
+  def from(modelName: String, config: ConfigReader): OpenAIConfig =
     OpenAIConfig(
-      apiKey = readEnv("OPENAI_API_KEY").getOrElse(
-        throw new IllegalArgumentException("OPENAI_API_KEY not set, required when using openai/ model.")
-      ),
+      apiKey = config
+        .get(OPENAI_API_KEY)
+        .getOrElse(
+          throw new IllegalArgumentException("OPENAI_API_KEY not set, required when using openai/ model.")
+        ),
       model = modelName,
-      organization = readEnv("OPENAI_ORGANIZATION"),
-      baseUrl = readEnv("OPENAI_BASE_URL").getOrElse("https://api.openai.com/v1")
+      organization = config.get(OPENAI_ORG),
+      baseUrl = config.getOrElse(OPENAI_BASE_URL, DEFAULT_OPENAI_BASE_URL)
     )
-  }
 }
 
 case class AzureConfig(
   endpoint: String,
   apiKey: String,
   model: String,
-  apiVersion: String = "2023-12-01-preview"
+  apiVersion: String
 ) extends ProviderConfig
 
 object AzureConfig {
 
-  /**
-   * Create an AzureConfig from environment variables
-   */
-  def fromEnv(modelName: String): AzureConfig = {
-    val readEnv = ProviderConfig.readEnv _
-
-    val endpoint = readEnv("AZURE_API_BASE").getOrElse(
-      throw new IllegalArgumentException("AZURE_API_BASE not set, required when using azure/ model.")
-    )
-    val apiKey = readEnv("AZURE_API_KEY").getOrElse(
-      throw new IllegalArgumentException("AZURE_API_KEY not set, required when using azure/ model.")
-    )
-    val apiVersion = readEnv("AZURE_API_VERSION").getOrElse("2023-12-01-preview")
+  def from(modelName: String, config: ConfigReader): AzureConfig = {
+    val endpoint = config
+      .get(AZURE_API_BASE)
+      .getOrElse(
+        throw new IllegalArgumentException("AZURE_API_BASE not set, required when using azure/ model.")
+      )
+    val apiKey = config
+      .get(AZURE_API_KEY)
+      .getOrElse(
+        throw new IllegalArgumentException("AZURE_API_KEY not set, required when using azure/ model.")
+      )
+    val apiVersion = config.get(AZURE_API_VERSION).getOrElse(DEFAULT_AZURE_V2025_01_01_PREVIEW)
 
     AzureConfig(
       endpoint = endpoint,
@@ -71,26 +62,22 @@ object AzureConfig {
 
 case class AnthropicConfig(
   apiKey: String,
-  model: String = "claude-3-opus-20240229",
-  baseUrl: String = "https://api.anthropic.com"
+  model: String,
+  baseUrl: String
 ) extends ProviderConfig
 
 object AnthropicConfig {
 
-  /**
-   * Create an AnthropicConfig from environment variables
-   */
-  def fromEnv(modelName: String): AnthropicConfig = {
-    val readEnv = ProviderConfig.readEnv _
-
+  def from(modelName: String, config: ConfigReader): AnthropicConfig =
     AnthropicConfig(
-      apiKey = readEnv("ANTHROPIC_API_KEY").getOrElse(
-        throw new IllegalArgumentException("ANTHROPIC_API_KEY not set, required when using anthropic/ model.")
-      ),
+      apiKey = config
+        .get(ANTHROPIC_API_KEY)
+        .getOrElse(
+          throw new IllegalArgumentException("ANTHROPIC_API_KEY not set, required when using anthropic/ model.")
+        ),
       model = modelName,
-      baseUrl = readEnv("ANTHROPIC_BASE_URL").getOrElse("https://api.anthropic.com")
+      baseUrl = config.getOrElse(ANTHROPIC_BASE_URL, DEFAULT_ANTHROPIC_BASE_URL)
     )
-  }
 }
 
 case class OllamaConfig(
@@ -99,12 +86,10 @@ case class OllamaConfig(
 ) extends ProviderConfig
 
 object OllamaConfig {
-
-  def fromEnv(modelName: String): Option[OllamaConfig] =
-    ProviderConfig.readEnv("OLLAMA_BASE_URL").map { baseUrl =>
-      OllamaConfig(
-        model = modelName,
-        baseUrl = baseUrl
-      )
-    }
+  def from(modelName: String, config: ConfigReader): OllamaConfig = {
+    val baseUrl = config
+      .get(OLLAMA_BASE_URL)
+      .getOrElse(throw new IllegalArgumentException("OLLAMA_BASE_URL must be set for ollama provider"))
+    OllamaConfig(model = modelName, baseUrl = baseUrl)
+  }
 }

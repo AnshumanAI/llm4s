@@ -8,7 +8,12 @@ final case class ServiceError private (
   httpStatus: Int,
   provider: String,
   requestId: Option[String] = None
-) extends LLMError {
+) extends LLMError
+    with RecoverableError {
+
+  override val code: Option[String]     = Some(httpStatus.toString)
+  override val retryDelay: Option[Long] = if (isRecoverable) Some(2000) else None
+
   override val context: Map[String, String] = Map(
     "httpStatus" -> httpStatus.toString,
     "provider"   -> provider

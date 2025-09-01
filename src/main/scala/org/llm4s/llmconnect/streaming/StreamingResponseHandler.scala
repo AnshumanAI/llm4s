@@ -21,7 +21,7 @@ trait StreamingResponseHandler {
   /**
    * Get the final completion after streaming is done
    */
-  def getCompletion(): Result[Completion]
+  def getCompletion: Result[Completion]
 
   /**
    * Check if streaming is complete
@@ -44,9 +44,9 @@ trait StreamingResponseHandler {
  */
 abstract class BaseStreamingResponseHandler extends StreamingResponseHandler {
 
-  protected val accumulator                      = StreamingAccumulator.create()
-  protected var streamingError: Option[LLMError] = None
-  protected var complete                         = false
+  protected val accumulator: StreamingAccumulator = StreamingAccumulator.create()
+  protected var streamingError: Option[LLMError]  = None
+  protected var complete                          = false
 
   override def isComplete: Boolean = complete
 
@@ -55,14 +55,14 @@ abstract class BaseStreamingResponseHandler extends StreamingResponseHandler {
     complete = true
   }
 
-  override def getCompletion(): Result[Completion] =
+  override def getCompletion: Result[Completion] =
     streamingError match {
       case Some(error) => Left(error)
       case None =>
         if (!complete) {
           Left(ServiceError(500, "streaming", "Streaming not yet complete"))
         } else {
-          accumulator.toCompletion()
+          accumulator.toCompletion
         }
     }
 

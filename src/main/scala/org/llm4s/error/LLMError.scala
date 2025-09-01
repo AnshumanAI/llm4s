@@ -1,6 +1,7 @@
 package org.llm4s.error
 
 import cats.Show
+import org.slf4j.MDC
 
 /**
  * Enhanced comprehensive error hierarchy for LLM operations using ADTs.
@@ -28,6 +29,9 @@ trait LLMError extends Product with Serializable {
   /** Additional context information */
   def context: Map[String, String] = Map.empty
 
+  /** Error correlation IDs for debugging */
+  def correlationId: Option[String] = Option(MDC.get("correlationId"))
+
   /** DEPRECATED: Use type-level markers instead */
   @deprecated("Use pattern matching on RecoverableError/NonRecoverableError traits", "0.1.9")
   def isRecoverable: Boolean = this match {
@@ -38,7 +42,10 @@ trait LLMError extends Product with Serializable {
   /** Formatted error message with context */
   def formatted: String = {
     val contextStr = context.toList.map { case (k, v) => s"$k=$v" }.mkString("[", ",", "]")
-    s"${getClass.getSimpleName}: $message$contextStr"
+    val corrStr    = correlationId.map(id => s" [correlationId=$id]").getOrElse("")
+    val codeStr    = code.map(c => s" [$c]").getOrElse("")
+
+    s"${getClass.getSimpleName}: $message$codeStr$contextStr$corrStr"
   }
 }
 
@@ -64,9 +71,8 @@ object LLMError {
    */
 
   def isRecoverable(error: LLMError): Boolean = error match {
-    case _: RecoverableError        => true
-    case _: NonRecoverableError     => false
-    case serviceError: ServiceError => serviceError.isRecoverableStatus
+    case _: RecoverableError    => true
+    case _: NonRecoverableError => false
   }
 
   def recoverableErrors(errors: List[LLMError]): List[LLMError] =
