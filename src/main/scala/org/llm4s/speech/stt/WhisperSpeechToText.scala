@@ -2,9 +2,12 @@ package org.llm4s.speech.stt
 
 import org.llm4s.types.Result
 import org.llm4s.speech.AudioInput
+import org.llm4s.speech.io.WavFileGenerator
+import org.llm4s.error.{ LLMError, ProcessingError }
 import cats.implicits._
 
 import java.nio.file.{ Files, Path }
+import java.io.IOException
 import scala.sys.process._
 import scala.util.Try
 import org.llm4s.types.TryOps
@@ -21,26 +24,50 @@ final class WhisperSpeechToText(
   override val name: String = "whisper-cli"
 
   override def transcribe(input: AudioInput, options: STTOptions): Result[Transcription] =
-    Try {
-      val wav: Path = input match {
-        case AudioInput.FileAudio(path) => path
+    for {
+      wav <- input match {
+        case AudioInput.FileAudio(path) => Right(path)
         case AudioInput.BytesAudio(bytes, _, _) =>
-          val tmp = Files.createTempFile("llm4s-whisper-", ".wav")
-          Files.write(tmp, bytes)
-          tmp
+          WavFileGenerator.createTempWavFile("llm4s-whisper-").flatMap { tmp =>
+            try {
+              Files.write(tmp, bytes)
+              Right(tmp)
+            } catch {
+              case _: IOException => Left(ProcessingError.audioValidation("IO error writing bytes to temp WAV file"))
+              case _: SecurityException =>
+                Left(ProcessingError.audioValidation("Security error accessing temp WAV file"))
+              case _: Exception => Left(ProcessingError.audioValidation("Failed to write bytes to temp WAV file"))
+            }
+          }
         case AudioInput.StreamAudio(stream, _, _) =>
-          val tmp = Files.createTempFile("llm4s-whisper-", ".wav")
-          Files.write(tmp, stream.readAllBytes())
-          tmp
+          WavFileGenerator.createTempWavFile("llm4s-whisper-").flatMap { tmp =>
+            try {
+              Files.write(tmp, stream.readAllBytes())
+              Right(tmp)
+            } catch {
+              case _: IOException => Left(ProcessingError.audioValidation("IO error writing stream to temp WAV file"))
+              case _: SecurityException =>
+                Left(ProcessingError.audioValidation("Security error accessing temp WAV file"))
+              case _: Exception => Left(ProcessingError.audioValidation("Failed to write stream to temp WAV file"))
+            }
+          }
       }
 
-      val args = buildWhisperArgs(wav, options)
+      args = buildWhisperArgs(wav, options)
 
-      val output     = args.!!
-      val transcript = parseWhisperOutput(output, options)
+      output <-
+        try
+          Right(args.!!)
+        catch {
+          case _: java.io.IOException => Left(ProcessingError.audioValidation("Whisper CLI not found or IO error"))
+          case _: RuntimeException =>
+            Left(ProcessingError.audioValidation("Whisper CLI execution failed with non-zero exit code"))
+          case _: Exception => Left(ProcessingError.audioValidation("Whisper CLI execution failed"))
+        }
 
-      transcript
-    }.toResult
+      transcript = parseWhisperOutput(output, options)
+
+    } yield transcript
 
   private def buildWhisperArgs(inputPath: Path, options: STTOptions): Seq[String] = {
     val baseArgs = command ++ Seq(

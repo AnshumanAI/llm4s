@@ -2,7 +2,7 @@ package org.llm4s.speech.stt
 
 import org.llm4s.speech.{ AudioInput, AudioMeta }
 import org.llm4s.types.Result
-import org.llm4s.error.LLMError
+import org.llm4s.error.ProcessingError
 import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.ByteArrayInputStream
@@ -66,7 +66,7 @@ final class VoskSpeechToText(
 
     } catch {
       case e: Exception =>
-        Left(LLMError.fromThrowable(e))
+        Left(ProcessingError.audioValidation("Vosk processing failed", Some(e)))
     }
 
   private def prepareAudioForVosk(input: AudioInput): Array[Byte] =

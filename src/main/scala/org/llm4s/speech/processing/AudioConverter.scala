@@ -2,6 +2,7 @@ package org.llm4s.speech.processing
 
 import org.llm4s.speech.AudioMeta
 import org.llm4s.types.Result
+import org.llm4s.error.ProcessingError
 
 /**
  * Generic audio converter trait for transforming audio between different formats.
@@ -14,6 +15,18 @@ trait AudioConverter[From, To] {
   /** Compose this converter with another converter */
   def andThen[C](next: AudioConverter[To, C]): AudioConverter[From, C] =
     AudioConverter.CompositeConverter(this, next)
+
+  /** Map over the result of this converter */
+  def map[C](f: To => C): AudioConverter[From, C] =
+    AudioConverter.MappedConverter(this, f)
+
+  /** FlatMap for chaining converters that might fail */
+  def flatMap[C](f: To => Result[C]): AudioConverter[From, C] =
+    AudioConverter.FlatMappedConverter(this, f)
+
+  /** Filter results based on a predicate */
+  def filter(predicate: To => Boolean, errorMsg: String = "Filter condition not met"): AudioConverter[From, To] =
+    AudioConverter.FilteredConverter(this, predicate, errorMsg)
 }
 
 /**
@@ -82,6 +95,44 @@ object AudioConverter {
   case class IdentityConverter[A]() extends AudioConverter[A, A] {
     def convert(input: A): Result[A] = Right(input)
     def name: String                 = "identity"
+  }
+
+  /**
+   * Mapped converter for applying pure functions
+   */
+  case class MappedConverter[A, B, C](
+    underlying: AudioConverter[A, B],
+    f: B => C
+  ) extends AudioConverter[A, C] {
+    def convert(input: A): Result[C] = underlying.convert(input).map(f)
+    def name: String                 = s"${underlying.name} -> mapped"
+  }
+
+  /**
+   * FlatMapped converter for chaining fallible operations
+   */
+  case class FlatMappedConverter[A, B, C](
+    underlying: AudioConverter[A, B],
+    f: B => Result[C]
+  ) extends AudioConverter[A, C] {
+    def convert(input: A): Result[C] = underlying.convert(input).flatMap(f)
+    def name: String                 = s"${underlying.name} -> flatMapped"
+  }
+
+  /**
+   * Filtered converter for conditional processing
+   */
+  case class FilteredConverter[A, B](
+    underlying: AudioConverter[A, B],
+    predicate: B => Boolean,
+    errorMsg: String
+  ) extends AudioConverter[A, B] {
+    def convert(input: A): Result[B] =
+      underlying.convert(input).flatMap { result =>
+        if (predicate(result)) Right(result)
+        else Left(ProcessingError.audioValidation(errorMsg))
+      }
+    def name: String = s"${underlying.name} -> filtered"
   }
 
   /**

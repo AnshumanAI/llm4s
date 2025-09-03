@@ -1,22 +1,19 @@
 package embeddingsupport
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
-
+import org.llm4s.config.ConfigReader.LLMConfig
+import org.llm4s.llmconnect.EmbeddingClient
+import org.llm4s.llmconnect.config.{ EmbeddingConfig, ModelDimensionRegistry }
 import org.llm4s.llmconnect.encoding.UniversalEncoder
 import org.llm4s.llmconnect.model._
 import org.llm4s.llmconnect.provider.EmbeddingProvider
-import org.llm4s.llmconnect.EmbeddingClient
 import org.llm4s.llmconnect.utils.ModelSelector
-import org.llm4s.llmconnect.config.{ EmbeddingConfig, ModelDimensionRegistry }
-import org.llm4s.config.ConfigReader
-import org.llm4s.config.ConfigReader.LLMConfig
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-import java.nio.file.{ Files, Path }
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
+import java.nio.file.{ Files, Path }
+import java.nio.{ ByteBuffer, ByteOrder }
+import javax.imageio.ImageIO
 
 /**
  * Lean, high-signal tests for Embedx-v2.
@@ -115,13 +112,14 @@ class EmbedxV2Spec extends AnyFunSuite with Matchers {
     audRes.isLeft shouldBe true
     vidRes.isLeft shouldBe true
 
-    imgRes.left.get.code shouldBe Some("501")
-    audRes.left.get.code shouldBe Some("501")
-    vidRes.left.get.code shouldBe Some("501")
+    imgRes.fold(_.code shouldBe (Some("501")), _ => fail("Expected imgRes Left(501)"))
+    audRes.fold(_.code shouldBe (Some("501")), _ => fail("Expected LaudRes eft(501)"))
+    vidRes.fold(_.code shouldBe (Some("501")), _ => fail("Expected vidRes Left(501)"))
 
-    imgRes.left.get.provider shouldBe "encoder"
-    audRes.left.get.provider shouldBe "encoder"
-    vidRes.left.get.provider shouldBe "encoder"
+    imgRes.fold(_.provider shouldBe "encoder", _ => fail("Expected imgRes Left(encoder)"))
+    audRes.fold(_.provider shouldBe "encoder", _ => fail("Expected audRes Left(encoder)"))
+    vidRes.fold(_.provider shouldBe "encoder", _ => fail("Expected vidRes Left(encoder)"))
+
   }
 
   test("Experimental stubs: image/audio/video produce vectors and experimental=true") {

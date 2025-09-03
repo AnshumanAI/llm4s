@@ -3,10 +3,12 @@ package org.llm4s.speech.io
 import org.llm4s.speech.GeneratedAudio
 import org.llm4s.error.LLMError
 import org.llm4s.types.Result
+import org.llm4s.resource.ManagedResource
 
-import java.io.{ ByteArrayInputStream, FileOutputStream }
+import java.io.FileOutputStream
 import java.nio.file.Path
-import javax.sound.sampled.{ AudioFileFormat, AudioFormat => JAudioFormat, AudioInputStream, AudioSystem }
+import scala.util.Try
+import org.llm4s.types.TryOps
 
 object AudioIO {
 
@@ -14,32 +16,16 @@ object AudioIO {
   final case class SaveFailed(message: String, override val context: Map[String, String] = Map.empty)
       extends AudioIOError
 
-  /** Save PCM16 WAV bytes to a file. */
+  /** Save PCM16 WAV bytes to a file using WavFileGenerator. */
   def saveWav(audio: GeneratedAudio, path: Path): Result[Path] =
-    try {
-      val format = new JAudioFormat(
-        audio.meta.sampleRate.toFloat,
-        audio.meta.bitDepth,
-        audio.meta.numChannels,
-        /* signed = */ true,
-        /* bigEndian = */ false
-      )
-      val bais = new ByteArrayInputStream(audio.data)
-      val ais  = new AudioInputStream(bais, format, audio.data.length / format.getFrameSize)
-      val _    = AudioSystem.write(ais, AudioFileFormat.Type.WAVE, path.toFile)
-      Right(path)
-    } catch {
-      case e: Exception => Left(SaveFailed(Option(e.getMessage).getOrElse("Failed to save WAV")))
-    }
+    WavFileGenerator.saveAsWav(audio, path)
 
-  /** Save raw PCM16 little-endian to a file. */
+  /** Save raw PCM16 little-endian to a file using ManagedResource. */
   def saveRawPcm16(audio: GeneratedAudio, path: Path): Result[Path] =
-    try {
-      val fos = new FileOutputStream(path.toFile)
-      try fos.write(audio.data)
-      finally fos.close()
-      Right(path)
-    } catch {
-      case e: Exception => Left(SaveFailed(Option(e.getMessage).getOrElse("Failed to save raw PCM")))
+    ManagedResource.fileOutputStream(path).use { fos =>
+      Try {
+        fos.write(audio.data)
+        path
+      }.toResult.left.map(_ => SaveFailed("Failed to save raw PCM"))
     }
 }

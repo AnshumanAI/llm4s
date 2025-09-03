@@ -1,12 +1,15 @@
 package org.llm4s.speech.tts
 
-import org.llm4s.error.LLMError
+import org.llm4s.error.{ LLMError, ProcessingError }
 import org.llm4s.types.Result
 import org.llm4s.speech.{ GeneratedAudio, AudioMeta }
+import org.llm4s.speech.io.WavFileGenerator
 import cats.implicits._
 
 import java.nio.file.Files
 import scala.sys.process._
+import scala.util.Try
+import org.llm4s.types.TryOps
 
 /**
  * Tacotron2 integration via CLI or local server. This is a thin adapter;
@@ -18,11 +21,11 @@ final class Tacotron2TextToSpeech(
   override val name: String = "tacotron2-cli"
 
   override def synthesize(text: String, options: TTSOptions): Result[GeneratedAudio] =
-    try {
-      val tmpOut      = Files.createTempFile("llm4s-tts-", ".wav")
-      val baseCommand = command ++ Seq("--text", text, "--out", tmpOut.toString)
+    for {
+      tmpOut <- WavFileGenerator.createTempWavFile("llm4s-tts-")
+      baseCommand = command ++ Seq("--text", text, "--out", tmpOut.toString)
 
-      val optFlags = List(
+      optFlags = List(
         options.voice.map(v => Seq("--voice", v)),
         options.language.map(l => Seq("--lang", l)),
         options.speakingRate.map(r => Seq("--rate", r.toString)),
@@ -30,14 +33,11 @@ final class Tacotron2TextToSpeech(
         options.volumeGainDb.map(v => Seq("--gain", v.toString))
       ).flatten
 
-      val args = baseCommand ++ optFlags.combineAll
+      args = baseCommand ++ optFlags.combineAll
 
-      val _ = args.!
+      _ <- Try(args.!).toResult.left.map(_ => ProcessingError.audioValidation("Tacotron2 CLI execution failed"))
 
-      val bytes = Files.readAllBytes(tmpOut)
-      val meta  = AudioMeta(sampleRate = 22050, numChannels = 1, bitDepth = 16)
-      Right(GeneratedAudio(bytes, meta, options.outputFormat))
-    } catch {
-      case e: Exception => Left(LLMError.fromThrowable(e))
-    }
+      audio <- WavFileGenerator.readWavFile(tmpOut)
+
+    } yield audio.copy(format = options.outputFormat)
 }
